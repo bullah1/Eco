@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794449866080,
+      "tag": "0000_create_resort_booking_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794450088601,
+      "tag": "0001_add_resort_content_and_availability",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794450957234,
+      "tag": "0002_restrict_guest_profile_updates",
+      "breakpoints": true
+    }
+  ]
+}
