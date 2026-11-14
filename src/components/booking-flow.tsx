@@ -12,19 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/lib/auth-context";
 import { Eyebrow } from "@/components/resort-site";
 import { getMyReservations, getGuestProfile } from "@/lib/resort.functions";
-
-type AvailableRoom = {
-  room_unit_id: string;
-  room_name: string;
-  room_type_id: string;
-  type_name: string;
-  type_slug: string;
-  description: string;
-  nightly_rate_cents: number;
-  max_guests: number;
-  features: string[];
-  image_url: string;
-};
+import { RoomCard, type AvailableRoom } from "@/components/room-card";
 
 function todayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -105,7 +93,7 @@ export function BookingFlow() {
               {roomQuery.isFetching && <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="animate-spin" size={16}/>Checking the coast for you…</p>}
               {roomQuery.isError && <p role="alert" className="mt-8 text-sm text-destructive">{roomQuery.error.message}</p>}
               {!roomQuery.isFetching && roomQuery.data?.length === 0 && <div className="mt-8 border border-border p-6"><BedDouble size={24} className="text-resort-ocean"/><h3 className="mt-4 font-display text-2xl text-primary">No open stays for these dates.</h3><p className="mt-2 text-sm text-muted-foreground">The resort’s room list is being prepared, or those dates are already spoken for. Try again later or choose different dates.</p><Button variant="outline" className="mt-5" onClick={()=>setStep(1)}>Change dates</Button></div>}
-              <div className="mt-6 grid gap-5">{roomQuery.data?.map((room)=><button type="button" key={room.room_unit_id} onClick={()=>{setSelectedRoom(room); setMessage("");}} className={`grid w-full gap-4 border p-4 text-left transition-colors sm:grid-cols-[190px_1fr_auto] sm:items-center ${selectedRoom?.room_unit_id === room.room_unit_id ? "border-resort-ocean bg-resort-ocean-soft/40" : "border-border hover:border-resort-gold"}`}><div className="aspect-[4/3] bg-resort-sand">{room.image_url && <img src={room.image_url} alt="" loading="lazy" width={640} height={480} className="size-full object-cover"/>}</div><span><span className="block font-display text-2xl text-primary">{room.type_name}</span><span className="mt-1 block text-xs text-muted-foreground">{room.room_name} · Up to {room.max_guests} guests</span><span className="mt-3 block text-sm leading-5 text-muted-foreground">{room.description}</span></span><span className="flex items-center justify-between gap-2 sm:flex-col sm:items-end"><span className="text-xs text-muted-foreground">${(room.nightly_rate_cents / 100).toLocaleString()} / night</span><span className={`grid size-6 place-items-center rounded-full border ${selectedRoom?.room_unit_id === room.room_unit_id ? "border-resort-ocean bg-resort-ocean text-resort-cream" : "border-border"}`}>{selectedRoom?.room_unit_id === room.room_unit_id && <Check size={14}/>}</span></span></button>)}</div>
+              <div className="mt-6 grid gap-5">{roomQuery.data?.map((room)=><RoomCard key={room.room_unit_id} room={room} selected={selectedRoom?.room_unit_id === room.room_unit_id} onSelect={()=>{setSelectedRoom(room); setMessage("");}}/>)}</div>
               {roomQuery.data && roomQuery.data.length > 0 && <div className="mt-8 flex justify-between"><Button variant="ghost" onClick={()=>setStep(1)}><ArrowLeft size={15}/>Dates</Button><Button disabled={!selectedRoom || guestCount > (selectedRoom?.max_guests ?? 0)} onClick={()=>setStep(3)}>Continue <ArrowRight size={15}/></Button></div>}
             </>}
 
