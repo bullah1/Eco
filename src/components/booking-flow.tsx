@@ -86,7 +86,7 @@ export function BookingFlow() {
     <div className="min-h-[calc(100svh-68px)] bg-resort-cream px-5 py-12 sm:px-8 lg:py-16">
       <div className="mx-auto max-w-6xl">
         <Eyebrow>A slower way to arrive</Eyebrow>
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-6"><div><h1 className="text-4xl text-primary sm:text-5xl">Find your stay.</h1><p className="mt-3 text-sm text-muted-foreground">Santa Monica, California · Where Silence Meets the Sea</p></div>{step < 5 && <div className="flex items-center gap-2 text-xs text-resort-ocean"><Waves size={16}/>Reservation request</div>}</div>
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-6"><div><h1 className="text-4xl text-primary sm:text-5xl">Find your stay.</h1><p className="mt-3 text-sm text-muted-foreground">Saint Martin's Island, Bangladesh · Where Silence Meets the Sea</p></div>{step < 5 && <div className="flex items-center gap-2 text-xs text-resort-ocean"><Waves size={16}/>Reservation request</div>}</div>
 
         <div className="mt-10 grid grid-cols-5 border-y border-border py-4" aria-label="Booking progress">
           {steps.map((label, index) => <div key={label} className={`flex items-center gap-2 text-[10px] sm:text-xs ${step >= index + 1 ? "text-primary" : "text-muted-foreground"}`}><span className={`grid size-6 shrink-0 place-items-center rounded-full border ${step > index + 1 ? "border-resort-ocean bg-resort-ocean text-resort-cream" : step === index + 1 ? "border-resort-gold text-primary" : "border-border"}`}>{step > index + 1 ? <Check size={12}/> : index + 1}</span><span className="hidden sm:inline">{label}</span></div>)}

@@ -7,7 +7,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Santa Monica Eco Beach Resort | Where Silence Meets the Sea" },
-      { name: "description", content: "Find a quieter kind of coastal retreat at Santa Monica Eco Beach Resort in Santa Monica, California." },
+      { name: "description", content: "Find a quieter kind of coastal retreat at Santa Monica Eco Beach Resort on Saint Martin's Island, Bangladesh." },
       { property: "og:title", content: "Santa Monica Eco Beach Resort | Where Silence Meets the Sea" },
       { property: "og:description", content: "A considered coastal retreat for the moments that ask you to slow down." },
       { property: "og:type", content: "website" },

@@ -5,7 +5,7 @@ import { ExperiencesPage } from "@/components/content-pages";
 export const Route = createFileRoute("/experiences")({
   head: () => ({ meta: [
     { title: "Coastal Experiences | Santa Monica Eco Beach Resort" },
-    { name: "description", content: "Find coastal rituals and thoughtful experiences at Santa Monica Eco Beach Resort in Santa Monica." },
+    { name: "description", content: "Find coastal rituals and thoughtful experiences at Santa Monica Eco Beach Resort on Saint Martin's Island." },
     { property: "og:title", content: "Coastal Experiences | Santa Monica Eco Beach Resort" },
     { property: "og:description", content: "From first light to an evening that takes its time, follow your own tide." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },

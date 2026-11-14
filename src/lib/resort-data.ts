@@ -7,7 +7,7 @@ export const firstStayConcept = {
     category: "Stay concept",
     description: "A natural timber hideaway shaped around horizon views and unhurried mornings.",
     image: cottageImage,
-    imageAlt: "A timber beach cottage opening onto the Pacific at sunrise",
+    imageAlt: "Coconut palms leaning over the sandy shore of Saint Martin's Island",
     detail: "Ocean-facing cottage",
   };
 
@@ -16,7 +16,7 @@ export const secondStayConcept = {
     category: "Stay concept",
     description: "Soft linen, organic textures, and a quieter connection to the coastal landscape.",
     image: diningImage,
-    imageAlt: "A candlelit dining table on a timber deck above the coast",
+    imageAlt: "A leaning coconut palm and wooden boats resting on the beach",
     detail: "Coastal retreat",
   };
 
@@ -26,14 +26,14 @@ export const firstExperienceConcept = {
     name: "First Light",
     description: "A slow start beside the water as the coast wakes around you.",
     image: wellnessImage,
-    imageAlt: "Two guests stretching on a coastal deck at sunrise",
+    imageAlt: "Tall coconut palms along the beach beside the sea",
   };
 
 export const secondExperienceConcept = {
     name: "A Table by the Sea",
     description: "An intimate evening shaped by seasonal coastal flavours.",
     image: diningImage,
-    imageAlt: "A candlelit seasonal dinner on the shoreline at sunset",
+    imageAlt: "Wooden fishing boats gathered on the shallow turquoise sea",
   };
 
 export const experienceConcepts = [firstExperienceConcept, secondExperienceConcept];

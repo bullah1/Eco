@@ -15,7 +15,7 @@ export const Route = createFileRoute("/booking")({
   },
   head: () => ({ meta: [
     { title: "Reserve Your Stay | Santa Monica Eco Beach Resort" },
-    { name: "description", content: "Choose your dates and request a stay at Santa Monica Eco Beach Resort in Santa Monica." },
+    { name: "description", content: "Choose your dates and request a stay at Santa Monica Eco Beach Resort on Saint Martin's Island." },
     { property: "og:title", content: "Reserve Your Stay | Santa Monica Eco Beach Resort" },
     { property: "og:description", content: "Choose your dates, find an available stay, and request your time by the sea." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },

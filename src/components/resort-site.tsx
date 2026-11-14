@@ -80,7 +80,7 @@ export function ResortFooter() {
       <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr] lg:px-10 lg:py-16">
         <div>
           <BrandLogo tone="dark" size="lg" />
-          <p className="mt-2 max-w-sm text-sm leading-6 text-resort-cream/70">Where Silence Meets the Sea. An invitation to find your own rhythm along the Santa Monica coast.</p>
+          <p className="mt-2 max-w-sm text-sm leading-6 text-resort-cream/70">Where Silence Meets the Sea. An invitation to find your own rhythm along the Saint Martin's Island coast.</p>
         </div>
         <div>
           <p className="sagara-eyebrow text-[10px] font-semibold uppercase text-resort-gold">Find your way</p>
@@ -92,7 +92,7 @@ export function ResortFooter() {
         </div>
         <div>
           <p className="sagara-eyebrow text-[10px] font-semibold uppercase text-resort-gold">A little closer</p>
-          <p className="mt-4 text-sm leading-6 text-resort-cream/80">Santa Monica, California</p>
+          <p className="mt-4 text-sm leading-6 text-resort-cream/80">Saint Martin's Island, Bangladesh</p>
           <Link to="/contact" className="mt-2 inline-flex items-center gap-2 text-sm text-resort-cream hover:text-resort-gold">Plan a visit <ArrowRight size={14} /></Link>
           <p className="mt-6 text-xs text-resort-cream/55">Contact details will be shared by the resort soon.</p>
         </div>

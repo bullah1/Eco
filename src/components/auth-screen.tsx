@@ -136,7 +136,7 @@ export function AuthScreen() {
             <h1 className="mt-5 text-5xl leading-tight xl:text-6xl">Come back to your own rhythm.</h1>
             <p className="mt-5 max-w-md text-sm leading-7 text-resort-cream/75">Keep your stay close at hand, from the first morning light to the day you return home.</p>
           </div>
-          <p className="text-xs text-resort-cream/65">Where Silence Meets the Sea · Santa Monica, California</p>
+          <p className="text-xs text-resort-cream/65">Where Silence Meets the Sea · Saint Martin's Island, Bangladesh</p>
         </div>
       </section>
 
