@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -13,6 +13,7 @@ import { useCurrentUser } from "@/lib/auth-context";
 import { Eyebrow } from "@/components/resort-site";
 import { getMyReservations, getGuestProfile } from "@/lib/resort.functions";
 import { RoomCard, type AvailableRoom } from "@/components/room-card";
+import { allocateGuests, formatMoney, selectionProblem } from "@/lib/room-booking";
 
 function todayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -26,9 +27,9 @@ export function BookingFlow() {
   const [checkIn, setCheckIn] = useState(search.checkIn ?? "");
   const [checkOut, setCheckOut] = useState(search.checkOut ?? "");
   const [guestCount, setGuestCount] = useState(Math.min(6, Math.max(1, search.guests ?? 2)));
-  const [selectedRoom, setSelectedRoom] = useState<AvailableRoom | null>(null);
+  const [selectedRooms, setSelectedRooms] = useState<AvailableRoom[]>([]);
   const [note, setNote] = useState("");
-  const [reference, setReference] = useState("");
+  const [bookedRooms, setBookedRooms] = useState<{ title: string; reference: string }[]>([]);
   const [message, setMessage] = useState("");
   const nights = useMemo(() => checkIn && checkOut ? Math.max(1, Math.round((new Date(`${checkOut}T12:00:00`).getTime() - new Date(`${checkIn}T12:00:00`).getTime()) / 86400000)) : 0, [checkIn, checkOut]);
   const roomQuery = useQuery({
@@ -41,26 +42,45 @@ export function BookingFlow() {
     },
   });
 
+  useEffect(() => {
+    if (!roomQuery.data) return;
+    const available = new Set(roomQuery.data.map((room) => room.room_unit_id));
+    setSelectedRooms((current) => (current.some((room) => !available.has(room.room_unit_id)) ? current.filter((room) => available.has(room.room_unit_id)) : current));
+  }, [roomQuery.data]);
+
+  const toggleRoom = (room: AvailableRoom) => {
+    setMessage("");
+    setSelectedRooms((current) => (current.some((item) => item.room_unit_id === room.room_unit_id) ? current.filter((item) => item.room_unit_id !== room.room_unit_id) : [...current, room]));
+  };
+  const allocation = useMemo(() => allocateGuests(selectedRooms, guestCount), [selectedRooms, guestCount]);
+  const problem = selectionProblem(selectedRooms, guestCount);
+  const totalCents = selectedRooms.reduce((sum, room) => sum + room.nightly_rate_cents * nights, 0);
+  const roomWord = (count: number) => `${count} ${count === 1 ? "room" : "rooms"}`;
+
   const createReservation = useMutation({
     mutationFn: async () => {
-      if (!user || !selectedRoom) throw new Error("Sign in and select a room before continuing.");
-      const { data, error } = await supabase.from("reservations").insert({
+      if (!user || selectedRooms.length === 0 || !allocation) throw new Error("Sign in and select your rooms before continuing.");
+      const rows = selectedRooms.map((room, index) => ({
         user_id: user.id,
-        room_unit_id: selectedRoom.room_unit_id,
+        room_unit_id: room.room_unit_id,
         check_in: checkIn,
         check_out: checkOut,
-        guest_count: guestCount,
+        guest_count: allocation[index] ?? 1,
         guest_note: note.trim(),
-      }).select("booking_reference").single();
+      }));
+      const { data, error } = await supabase.from("reservations").insert(rows).select("booking_reference, room_unit_id");
       if (error) {
-        if (error.code === "23P01") throw new Error("Those dates were just reserved. Please choose different dates.");
-        if (error.code === "23514") throw new Error("That room can't accommodate this number of guests.");
+        if (error.code === "23P01") throw new Error("One of those rooms was just reserved for these dates. Please review your rooms and try again.");
+        if (error.code === "23514") throw new Error("One of the rooms can't accommodate this number of guests.");
         throw new Error("We couldn't save this reservation. Please check the dates and try again.");
       }
-      return data.booking_reference;
+      return selectedRooms.map((room) => ({
+        title: `${room.type_name} · ${room.room_name}`,
+        reference: data.find((row) => row.room_unit_id === room.room_unit_id)?.booking_reference ?? "",
+      }));
     },
-    onSuccess: async (bookingReference) => {
-      setReference(bookingReference);
+    onSuccess: async (results) => {
+      setBookedRooms(results);
       setMessage("");
       setStep(5);
       await queryClient.invalidateQueries({ queryKey: ["my-stays"] });
@@ -89,12 +109,13 @@ export function BookingFlow() {
             </>}
 
             {step === 2 && <>
-              <Eyebrow>Step 02</Eyebrow><h2 className="mt-3 text-3xl text-primary">Choose a place to land.</h2><p className="mt-2 text-sm text-muted-foreground">{checkIn && checkOut ? `${format(new Date(`${checkIn}T12:00:00`), "MMM d, yyyy")} — ${format(new Date(`${checkOut}T12:00:00`), "MMM d, yyyy")} · ${nights} ${nights === 1 ? "night" : "nights"}` : "Choose dates to see available stays."}</p>
+              <Eyebrow>Step 02</Eyebrow><h2 className="mt-3 text-3xl text-primary">Choose a place to land.</h2><p className="mt-2 text-sm text-muted-foreground">{checkIn && checkOut ? `${format(new Date(`${checkIn}T12:00:00`), "MMM d, yyyy")} — ${format(new Date(`${checkOut}T12:00:00`), "MMM d, yyyy")} · ${nights} ${nights === 1 ? "night" : "nights"}` : "Choose dates to see available stays."}</p><p className="mt-1 text-xs text-muted-foreground">Travelling as a group or family? You can select more than one room.</p>
               {roomQuery.isFetching && <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="animate-spin" size={16}/>Checking the coast for you…</p>}
               {roomQuery.isError && <p role="alert" className="mt-8 text-sm text-destructive">{roomQuery.error.message}</p>}
               {!roomQuery.isFetching && roomQuery.data?.length === 0 && <div className="mt-8 border border-border p-6"><BedDouble size={24} className="text-resort-ocean"/><h3 className="mt-4 font-display text-2xl text-primary">No open stays for these dates.</h3><p className="mt-2 text-sm text-muted-foreground">The resort’s room list is being prepared, or those dates are already spoken for. Try again later or choose different dates.</p><Button variant="outline" className="mt-5" onClick={()=>setStep(1)}>Change dates</Button></div>}
-              <div className="mt-6 grid gap-5">{roomQuery.data?.map((room)=><RoomCard key={room.room_unit_id} room={room} selected={selectedRoom?.room_unit_id === room.room_unit_id} onSelect={()=>{setSelectedRoom(room); setMessage("");}}/>)}</div>
-              {roomQuery.data && roomQuery.data.length > 0 && <div className="mt-8 flex justify-between"><Button variant="ghost" onClick={()=>setStep(1)}><ArrowLeft size={15}/>Dates</Button><Button disabled={!selectedRoom || guestCount > (selectedRoom?.max_guests ?? 0)} onClick={()=>setStep(3)}>Continue <ArrowRight size={15}/></Button></div>}
+              <div className="mt-6 grid gap-5">{roomQuery.data?.map((room)=><RoomCard key={room.room_unit_id} room={room} nights={nights} selected={selectedRooms.some((item)=>item.room_unit_id === room.room_unit_id)} onSelect={()=>toggleRoom(room)}/>)}</div>
+              {selectedRooms.length > 0 && <div className="mt-8 border border-resort-gold/70 bg-resort-cream p-5"><p className="font-display text-xl text-primary">Your selection · {roomWord(selectedRooms.length)}</p><ul className="mt-4 divide-y divide-border">{selectedRooms.map((room)=><li key={room.room_unit_id} className="flex items-start justify-between gap-3 py-3 text-sm"><span><span className="block font-medium text-primary">{room.type_name}</span><span className="block text-xs text-muted-foreground">{room.room_name} · {formatMoney(room.nightly_rate_cents)} × {nights} {nights===1?"night":"nights"}</span></span><span className="flex items-center gap-3"><span className="font-medium text-primary">{formatMoney(room.nightly_rate_cents*nights)}</span><button type="button" onClick={()=>toggleRoom(room)} aria-label={`Remove ${room.type_name}, ${room.room_name}`} className="text-xs text-muted-foreground underline-offset-4 hover:underline">Remove</button></span></li>)}</ul><p className="mt-3 flex justify-between border-t border-border pt-3 text-sm"><span className="text-muted-foreground">Estimated total</span><span className="font-semibold text-primary">{formatMoney(totalCents)}</span></p>{problem && <p role="alert" className="mt-3 text-xs text-destructive">{problem}</p>}</div>}
+              {roomQuery.data && roomQuery.data.length > 0 && <div className="mt-8 flex justify-between"><Button variant="ghost" onClick={()=>setStep(1)}><ArrowLeft size={15}/>Dates</Button><Button disabled={!allocation} onClick={()=>setStep(3)}>Continue <ArrowRight size={15}/></Button></div>}
             </>}
 
             {step === 3 && <>
@@ -103,19 +124,19 @@ export function BookingFlow() {
               <div className="mt-8"><Button variant="ghost" onClick={()=>setStep(2)}><ArrowLeft size={15}/>Choose another stay</Button></div>
             </>}
 
-            {step === 4 && selectedRoom && <>
+            {step === 4 && selectedRooms.length > 0 && allocation && <>
               <Eyebrow>Step 04</Eyebrow><h2 className="mt-3 text-3xl text-primary">A moment to review.</h2><p className="mt-2 text-sm text-muted-foreground">Your reservation request, all together.</p>
-              <div className="mt-8 divide-y divide-border border-y border-border">{[["Stay", selectedRoom.type_name],["Room",selectedRoom.room_name],["Arrival",format(new Date(`${checkIn}T12:00:00`),"EEE, MMM d, yyyy")],["Departure",format(new Date(`${checkOut}T12:00:00`),"EEE, MMM d, yyyy")],["Guests",`${guestCount} ${guestCount===1?"guest":"guests"}`],["Length",`${nights} ${nights===1?"night":"nights"}`],["Rate",`$${(selectedRoom.nightly_rate_cents/100).toLocaleString()} / night`],["Estimated stay",`$${(selectedRoom.nightly_rate_cents*nights/100).toLocaleString()}`]].map(([key,value])=><div className="flex justify-between gap-3 py-4 text-sm" key={key}><span className="text-muted-foreground">{key}</span><span className="text-right font-medium text-primary">{value}</span></div>)}</div>
+              <div className="mt-8 divide-y divide-border border-y border-border">{[["Arrival",format(new Date(`${checkIn}T12:00:00`),"EEE, MMM d, yyyy")],["Departure",format(new Date(`${checkOut}T12:00:00`),"EEE, MMM d, yyyy")],["Length",`${nights} ${nights===1?"night":"nights"}`],["Guests",`${guestCount} ${guestCount===1?"guest":"guests"}`]].map(([key,value])=><div className="flex justify-between gap-3 py-4 text-sm" key={key}><span className="text-muted-foreground">{key}</span><span className="text-right font-medium text-primary">{value}</span></div>)}{selectedRooms.map((room,index)=><div className="flex justify-between gap-3 py-4 text-sm" key={room.room_unit_id}><span><span className="block font-medium text-primary">{room.type_name}</span><span className="block text-xs text-muted-foreground">{room.room_name} · {allocation[index]} {allocation[index]===1?"guest":"guests"}</span></span><span className="text-right"><span className="block font-medium text-primary">{formatMoney(room.nightly_rate_cents*nights)}</span><span className="block text-xs text-muted-foreground">{formatMoney(room.nightly_rate_cents)} / night</span></span></div>)}<div className="flex justify-between gap-3 py-4 text-sm"><span className="text-muted-foreground">Estimated total · {roomWord(selectedRooms.length)}</span><span className="text-right text-base font-semibold text-primary">{formatMoney(totalCents)}</span></div></div>
               <div className="mt-6 grid gap-2"><Label htmlFor="guest-note">Anything we should know? <span className="font-normal text-muted-foreground">(optional)</span></Label><Textarea id="guest-note" value={note} maxLength={500} onChange={(event)=>setNote(event.target.value)} placeholder="A note for the resort" rows={3}/></div>
               <p className="mt-5 text-xs leading-5 text-muted-foreground">This sends a reservation request. No payment is collected here. The resort will confirm your stay directly.</p>
               {message && <p role="alert" className="mt-4 text-sm text-destructive">{message}</p>}
-              <div className="mt-7 flex flex-wrap justify-between gap-3"><Button variant="ghost" onClick={()=>setStep(3)}><ArrowLeft size={15}/>Your details</Button><Button disabled={createReservation.isPending} onClick={()=>createReservation.mutate()}>{createReservation.isPending ? "Sending request…" : "Request this stay"}<ArrowRight size={15}/></Button></div>
+              <div className="mt-7 flex flex-wrap justify-between gap-3"><Button variant="ghost" onClick={()=>setStep(3)}><ArrowLeft size={15}/>Your details</Button><Button disabled={createReservation.isPending} onClick={()=>createReservation.mutate()}>{createReservation.isPending ? "Sending request…" : selectedRooms.length > 1 ? "Request these rooms" : "Request this stay"}<ArrowRight size={15}/></Button></div>
             </>}
 
-            {step === 5 && <div className="py-8 text-center sm:py-14"><span className="mx-auto grid size-16 place-items-center rounded-full bg-resort-ocean-soft text-resort-ocean"><CircleCheck size={30}/></span><Eyebrow>We’ve received your request</Eyebrow><h2 className="mt-4 text-4xl text-primary">The coast is getting closer.</h2><p className="mx-auto mt-4 max-w-md text-sm leading-7 text-muted-foreground">Your request is in. The resort will be in touch to confirm the stay and next steps.</p><div className="mx-auto mt-8 max-w-sm border-y border-border py-5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Your reference</p><p className="mt-2 font-display text-2xl tracking-[0.12em] text-primary">{reference}</p></div><div className="mt-8 flex flex-wrap justify-center gap-3"><Button asChild><Link to="/my-stays">My stays</Link></Button><Button variant="outline" asChild><Link to="/">Return home</Link></Button></div></div>}
+            {step === 5 && <div className="py-8 text-center sm:py-14"><span className="mx-auto grid size-16 place-items-center rounded-full bg-resort-ocean-soft text-resort-ocean"><CircleCheck size={30}/></span><Eyebrow>We’ve received your request</Eyebrow><h2 className="mt-4 text-4xl text-primary">The coast is getting closer.</h2><p className="mx-auto mt-4 max-w-md text-sm leading-7 text-muted-foreground">Your request is in. The resort will be in touch to confirm the stay and next steps.</p><div className="mx-auto mt-8 max-w-sm border-y border-border py-5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{bookedRooms.length > 1 ? "Your references" : "Your reference"}</p>{bookedRooms.map((item)=><div key={item.reference} className="mt-3">{bookedRooms.length > 1 && <p className="text-xs text-muted-foreground">{item.title}</p>}<p className="font-display text-2xl tracking-[0.12em] text-primary">{item.reference}</p></div>)}</div><div className="mt-8 flex flex-wrap justify-center gap-3"><Button asChild><Link to="/my-stays">My stays</Link></Button><Button variant="outline" asChild><Link to="/">Return home</Link></Button></div></div>}
           </section>
 
-          <aside className="h-fit border-y border-border py-5 lg:sticky lg:top-24"><div className="flex items-center gap-2"><Waves size={17} className="text-resort-ocean"/><Eyebrow>Your coastal pause</Eyebrow></div><h2 className="mt-4 font-display text-2xl text-primary">A stay shaped around you.</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Every visit starts with a few thoughtful details. Choose your dates and we’ll show what’s available.</p>{selectedRoom && <div className="mt-6 border-t border-border pt-5"><p className="font-display text-xl text-primary">{selectedRoom.type_name}</p><p className="mt-1 text-xs text-muted-foreground">{nights} {nights===1?"night":"nights"} · {guestCount} {guestCount===1?"guest":"guests"}</p><p className="mt-4 flex justify-between text-sm"><span className="text-muted-foreground">Estimated stay</span><span className="font-semibold text-primary">${(selectedRoom.nightly_rate_cents*nights/100).toLocaleString()}</span></p></div>}<p className="mt-7 border-l-2 border-resort-gold pl-3 text-[11px] leading-5 text-muted-foreground">Your room and dates are checked against live availability. A reservation request is not confirmed until the resort contacts you.</p></aside>
+          <aside className="h-fit border-y border-border py-5 lg:sticky lg:top-24"><div className="flex items-center gap-2"><Waves size={17} className="text-resort-ocean"/><Eyebrow>Your coastal pause</Eyebrow></div><h2 className="mt-4 font-display text-2xl text-primary">A stay shaped around you.</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Every visit starts with a few thoughtful details. Choose your dates and we’ll show what’s available.</p>{selectedRooms.length > 0 && <div className="mt-6 border-t border-border pt-5"><p className="font-display text-xl text-primary">{roomWord(selectedRooms.length)}</p><p className="mt-1 text-xs text-muted-foreground">{nights} {nights===1?"night":"nights"} · {guestCount} {guestCount===1?"guest":"guests"}</p><ul className="mt-4 grid gap-2 text-sm">{selectedRooms.map((room)=><li key={room.room_unit_id} className="flex justify-between gap-3"><span className="text-muted-foreground">{room.type_name}</span><span className="text-primary">{formatMoney(room.nightly_rate_cents*nights)}</span></li>)}</ul><p className="mt-4 flex justify-between border-t border-border pt-3 text-sm"><span className="text-muted-foreground">Estimated total</span><span className="font-semibold text-primary">{formatMoney(totalCents)}</span></p></div>}<p className="mt-7 border-l-2 border-resort-gold pl-3 text-[11px] leading-5 text-muted-foreground">Your room and dates are checked against live availability. A reservation request is not confirmed until the resort contacts you.</p></aside>
         </div>
       </div>
     </div>

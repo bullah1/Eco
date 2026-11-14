@@ -206,12 +206,13 @@ export function RoomMediaDialog({
         <div className="flex items-center justify-between gap-4 border-t border-border p-4">
           <p className="text-sm text-muted-foreground">{price}</p>
           <Button
+            variant={selected ? "outline" : "default"}
             onClick={() => {
               onSelect();
               onOpenChange(false);
             }}
           >
-            {selected ? "Keep this room" : "Select this room"}
+            {selected ? "Remove this room" : "Add this room"}
           </Button>
         </div>
       </DialogContent>

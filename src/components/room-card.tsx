@@ -3,6 +3,7 @@ import { Check, Images, Move3d } from "lucide-react";
 
 import { RoomMediaDialog } from "@/components/room-viewer";
 import { getRoomMedia } from "@/lib/room-media";
+import { formatMoney } from "@/lib/room-booking";
 
 export type AvailableRoom = {
   room_unit_id: string;
@@ -21,10 +22,12 @@ export function RoomCard({
   room,
   selected,
   onSelect,
+  nights = 0,
 }: {
   room: AvailableRoom;
   selected: boolean;
   onSelect: () => void;
+  nights?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [start360, setStart360] = useState(false);
@@ -32,7 +35,7 @@ export function RoomCard({
     () => getRoomMedia(room.type_slug, room.image_url),
     [room.type_slug, room.image_url],
   );
-  const price = `$${(room.nightly_rate_cents / 100).toLocaleString()} / night`;
+  const price = `${formatMoney(room.nightly_rate_cents)} / night`;
   const photoCount = media.photos.length;
   const hasMedia = photoCount > 0 || Boolean(media.panorama);
 
@@ -102,9 +105,16 @@ export function RoomCard({
           </span>
         </span>
         <span className="flex items-center justify-between gap-2 sm:flex-col sm:items-end">
-          <span className="text-xs text-muted-foreground">{price}</span>
+          <span className="text-right text-xs text-muted-foreground">
+            {price}
+            {nights > 1 && (
+              <span className="block font-medium text-primary">
+                {formatMoney(room.nightly_rate_cents * nights)} for {nights} nights
+              </span>
+            )}
+          </span>
           <span
-            className={`grid size-6 place-items-center rounded-full border ${
+            className={`grid size-6 place-items-center rounded-sm border ${
               selected ? "border-resort-ocean bg-resort-ocean text-resort-cream" : "border-border"
             }`}
           >
