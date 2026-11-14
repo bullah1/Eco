@@ -188,7 +188,7 @@
 .sagara-hero {
   position: relative;
   isolation: isolate;
-  min-height: min(790px, 84svh);
+  min-height: min(900px, 92svh);
   background: var(--resort-wood);
 }
 .sagara-hero::after {
@@ -196,7 +196,7 @@
   z-index: -1;
   inset: 0;
   content: "";
-  background: linear-gradient(90deg, color-mix(in oklab, var(--resort-wood) 74%, transparent) 0%, color-mix(in oklab, var(--resort-wood) 45%, transparent) 44%, color-mix(in oklab, var(--resort-wood) 8%, transparent) 100%), linear-gradient(0deg, color-mix(in oklab, var(--resort-wood) 38%, transparent), transparent 50%);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--resort-wood) 74%, transparent) 0%, color-mix(in oklab, var(--resort-wood) 45%, transparent) 44%, color-mix(in oklab, var(--resort-wood) 8%, transparent) 100%), linear-gradient(180deg, color-mix(in oklab, var(--resort-wood) 45%, transparent), transparent 28%), linear-gradient(0deg, color-mix(in oklab, var(--resort-wood) 45%, transparent), transparent 50%);
 }
 .sagara-hero-image { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
 .sagara-hero-copy { text-shadow: 0 2px 24px color-mix(in oklab, var(--resort-wood) 42%, transparent); }
