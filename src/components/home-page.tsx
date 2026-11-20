@@ -5,6 +5,7 @@ import { ArrowRight, CalendarDays, Minus, Plus, Waves } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { experienceConcepts, firstStayConcept, stayConcepts } from "@/lib/resort-data";
+import { ContactFaqSection, FacilitiesSection, GallerySection, PackagesSection } from "@/components/home-sections";
 import { TextLink } from "@/components/resort-site";
 import heroImage from "@/assets/sagara-coast-hero.jpg";
 
@@ -79,6 +80,11 @@ export function HomePage() {
           </div>
         </div>
       </section>
+
+      <FacilitiesSection />
+      <PackagesSection />
+      <GallerySection />
+      <ContactFaqSection />
 
       <section className="bg-background px-6 py-24 sm:px-10 lg:py-32"><div className="mx-auto grid max-w-7xl gap-12 md:grid-cols-3 md:gap-16">{[{n:"i",title:"On the shoreline",copy:"Rooms sit close to the water on Saint Martin's Island, Bangladesh's only coral island."},{n:"ii",title:"Built with natural materials",copy:"Timber, linen and local craft keep the footprint light and the rooms warm."},{n:"iii",title:"Request in minutes",copy:"Pick dates and rooms online. The resort confirms your stay directly."}].map(({n,title,copy})=><div key={title}><p className="font-display text-xl italic text-resort-gold">{n}</p><div className="mt-4 h-px bg-border"/><h3 className="mt-6 text-3xl font-normal text-primary">{title}</h3><p className="mt-3 text-sm leading-7 text-muted-foreground">{copy}</p></div>)}</div></section>
 
