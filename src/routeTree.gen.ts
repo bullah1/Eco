@@ -19,6 +19,7 @@ import { Route as ExperiencesRouteImport } from './routes/experiences'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as MyStaysRouteImport } from './routes/my-stays'
 import { Route as StaysRouteImport } from './routes/stays'
+import { Route as RoomsSlugRouteImport } from './routes/rooms.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,11 @@ const StaysRoute = StaysRouteImport.update({
   path: '/stays',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoomsSlugRoute = RoomsSlugRouteImport.update({
+  id: '/rooms/$slug',
+  path: '/rooms/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/gallery': typeof GalleryRoute
   '/my-stays': typeof MyStaysRoute
   '/stays': typeof StaysRoute
+  '/rooms/$slug': typeof RoomsSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/gallery': typeof GalleryRoute
   '/my-stays': typeof MyStaysRoute
   '/stays': typeof StaysRoute
+  '/rooms/$slug': typeof RoomsSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/gallery': typeof GalleryRoute
   '/my-stays': typeof MyStaysRoute
   '/stays': typeof StaysRoute
+  '/rooms/$slug': typeof RoomsSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/my-stays'
     | '/stays'
+    | '/rooms/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/my-stays'
     | '/stays'
+    | '/rooms/$slug'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/my-stays'
     | '/stays'
+    | '/rooms/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   GalleryRoute: typeof GalleryRoute
   MyStaysRoute: typeof MyStaysRoute
   StaysRoute: typeof StaysRoute
+  RoomsSlugRoute: typeof RoomsSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaysRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rooms/$slug': {
+      id: '/rooms/$slug'
+      path: '/rooms/$slug'
+      fullPath: '/rooms/$slug'
+      preLoaderRoute: typeof RoomsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -246,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   GalleryRoute: GalleryRoute,
   MyStaysRoute: MyStaysRoute,
   StaysRoute: StaysRoute,
+  RoomsSlugRoute: RoomsSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -13,7 +13,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { RoomMedia } from "@/lib/room-media";
 
-function PanoramaViewer({ src }: { src: string }) {
+export function PanoramaViewer({ src }: { src: string }) {
   const container = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [hint, setHint] = useState(true);
@@ -80,7 +80,7 @@ function PanoramaViewer({ src }: { src: string }) {
   );
 }
 
-function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
+export function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
   const [index, setIndex] = useState(0);
   const total = photos.length;
   const go = (next: number) => setIndex((next + total) % total);
