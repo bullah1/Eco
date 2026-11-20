@@ -132,8 +132,8 @@ export function AuthScreen() {
         <div className="relative flex h-full min-h-[760px] flex-col justify-between p-12 text-resort-cream xl:p-20">
           <BrandLogo tone="dark" />
           <div className="max-w-xl">
-            <p className="sagara-eyebrow text-[10px] font-semibold uppercase text-resort-gold">A quieter kind of coast</p>
-            <h1 className="mt-5 text-5xl leading-tight xl:text-6xl">Come back to your own rhythm.</h1>
+            <p className="sagara-eyebrow text-[13px] font-medium text-resort-gold">A quieter kind of coast</p>
+            <h1 className="mt-5 text-5xl leading-tight xl:text-6xl">Come back to your own rhythm</h1>
             <p className="mt-5 max-w-md text-sm leading-7 text-resort-cream/75">Keep your stay close at hand, from the first morning light to the day you return home.</p>
           </div>
           <p className="text-xs text-resort-cream/65">Where Silence Meets the Sea · Saint Martin's Island, Bangladesh</p>
@@ -143,7 +143,7 @@ export function AuthScreen() {
       <section className="flex items-center justify-center px-5 py-12 sm:px-10 lg:px-14">
         <div className="w-full max-w-[430px]">
           <Button variant="ghost" size="sm" asChild className="mb-10 -ml-3"><Link to="/"><ArrowLeft size={15} /> Back to home</Link></Button>
-          <p className="sagara-eyebrow text-[10px] font-semibold uppercase text-resort-ocean">{mode === "signin" ? "Welcome back" : "Your coast, closer"}</p>
+          <p className="sagara-eyebrow text-[13px] font-medium text-muted-foreground">{mode === "signin" ? "Welcome back" : "Your coast, closer"}</p>
           <h2 className="mt-3 text-4xl text-primary">{mode === "signin" ? "Sign in" : "Create your account"}</h2>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">{mode === "signin" ? "Your next quiet moment is waiting." : "Save your details and keep your stays together."}</p>
 
@@ -155,7 +155,7 @@ export function AuthScreen() {
             <Button type="button" variant="outline" className="h-11 justify-center rounded-sm" disabled={busy} onClick={() => socialSignIn("lovable")}>Continue with Lovable</Button>
           </div>
 
-          <div className="my-7 flex items-center gap-4"><span className="h-px flex-1 bg-border"/><span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">or use email</span><span className="h-px flex-1 bg-border"/></div>
+          <div className="my-7 flex items-center gap-4"><span className="h-px flex-1 bg-border"/><span className="text-xs text-muted-foreground">or use email</span><span className="h-px flex-1 bg-border"/></div>
           <form onSubmit={submit} className="grid gap-5">
             {mode === "signup" && <div className="grid gap-2"><Label htmlFor="display-name">Full name</Label><Input id="display-name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} required /></div>}
             <div className="grid gap-2"><Label htmlFor="email">Email address</Label><Input id="email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>

@@ -66,7 +66,7 @@ export function RoomCard({
               loading="lazy"
               width={640}
               height={480}
-              className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="size-full object-cover"
             />
           )}
           {media.panorama && (

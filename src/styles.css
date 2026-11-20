@@ -203,9 +203,7 @@
 .sagara-nav { backdrop-filter: blur(14px); background: color-mix(in oklab, var(--resort-cream) 85%, transparent); }
 .sagara-booking-bar { box-shadow: 0 18px 52px color-mix(in oklab, var(--resort-wood) 13%, transparent); }
 .sagara-image-frame { overflow: hidden; background: var(--resort-sand); }
-.sagara-image-frame img { transition: transform 700ms ease; }
-.sagara-image-frame:hover img { transform: scale(1.035); }
-.sagara-eyebrow { letter-spacing: 0.14em; }
+.sagara-eyebrow { letter-spacing: 0.01em; }
 .sagara-provider-google { background: oklch(1 0 0); color: oklch(0.22 0 0); border: 1px solid oklch(0.61 0.008 150); }
 .sagara-provider-google:hover { background: oklch(0.975 0.003 150); }
 @media (prefers-reduced-motion: reduce) {

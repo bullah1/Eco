@@ -83,7 +83,7 @@ export function ResortFooter() {
           <p className="mt-2 max-w-sm text-sm leading-6 text-resort-cream/70">Where Silence Meets the Sea. An invitation to find your own rhythm along the Saint Martin's Island coast.</p>
         </div>
         <div>
-          <p className="sagara-eyebrow text-[10px] font-semibold uppercase text-resort-gold">Find your way</p>
+          <p className="sagara-eyebrow text-[13px] font-medium text-resort-gold">Find your way</p>
           <div className="mt-4 grid gap-2 text-sm text-resort-cream/80">
             <Link to="/stays" className="hover:text-resort-gold">The stay</Link>
             <Link to="/experiences" className="hover:text-resort-gold">Experiences</Link>
@@ -91,7 +91,7 @@ export function ResortFooter() {
           </div>
         </div>
         <div>
-          <p className="sagara-eyebrow text-[10px] font-semibold uppercase text-resort-gold">A little closer</p>
+          <p className="sagara-eyebrow text-[13px] font-medium text-resort-gold">A little closer</p>
           <p className="mt-4 text-sm leading-6 text-resort-cream/80">Saint Martin's Island, Bangladesh</p>
           <Link to="/contact" className="mt-2 inline-flex items-center gap-2 text-sm text-resort-cream hover:text-resort-gold">Plan a visit <ArrowRight size={14} /></Link>
           <p className="mt-6 text-xs text-resort-cream/55">Contact details will be shared by the resort soon.</p>
@@ -107,7 +107,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
 }
 
 export function Eyebrow({ children, light = false }: { children: ReactNode; light?: boolean }) {
-  return <p className={`sagara-eyebrow text-[10px] font-semibold uppercase ${light ? "text-resort-gold" : "text-resort-ocean"}`}>{children}</p>;
+  return <p className={`sagara-eyebrow text-[13px] font-medium ${light ? "text-resort-gold" : "text-muted-foreground"}`}>{children}</p>;
 }
 
 export function SectionHeading({ eyebrow, title, copy, light = false }: { eyebrow: string; title: string; copy?: string; light?: boolean }) {
