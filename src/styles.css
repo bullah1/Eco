@@ -30,7 +30,7 @@
  */
 
 @theme inline {
-  --font-display: "Playfair Display", Georgia, serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
   --font-sans: "Manrope", sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -178,8 +178,9 @@
   }
 
   h1, h2, h3, h4 {
-    font-family: "Playfair Display", Georgia, serif;
+    font-family: "Cormorant Garamond", Georgia, serif;
     font-weight: 500;
+    letter-spacing: -0.01em;
   }
 
   html { scroll-behavior: smooth; }
@@ -188,7 +189,7 @@
 .sagara-hero {
   position: relative;
   isolation: isolate;
-  min-height: min(900px, 92svh);
+  min-height: max(680px, calc(100svh - 68px));
   background: var(--resort-wood);
 }
 .sagara-hero::after {
