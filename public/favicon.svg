@@ -3,9 +3,9 @@
     <clipPath id="d"><circle cx="64" cy="64" r="48"/></clipPath>
     <clipPath id="s"><rect x="0" y="0" width="128" height="60"/></clipPath>
   </defs>
-  <rect width="128" height="128" rx="26" fill="#F5EFE3"/>
-  <g clip-path="url(#s)"><circle cx="64" cy="64" r="48" fill="#C5A46D"/></g>
-  <g clip-path="url(#d)" fill="none" stroke="#17324D">
+  <rect width="128" height="128" rx="26" fill="#F2F2F2"/>
+  <g clip-path="url(#s)"><circle cx="64" cy="64" r="48" fill="#C1A276"/></g>
+  <g clip-path="url(#d)" fill="none" stroke="#3B2E38">
     <path d="M-2 74 q13 -7 26 0 t26 0 t26 0 t26 0 t26 0" stroke-width="8"/>
     <path d="M-2 88 q13 -7 26 0 t26 0 t26 0 t26 0 t26 0" stroke-width="6.5"/>
     <path d="M-2 100 q13 -7 26 0 t26 0 t26 0 t26 0 t26 0" stroke-width="5"/>

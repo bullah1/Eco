@@ -2,9 +2,9 @@ import { useId } from "react";
 
 // Santa Monica Eco Beach Resort — luxury mark: a rising sun above three waves,
 // separated by negative space. Two brand colours only: deep navy and champagne gold.
-const NAVY = "#17324D";
-const GOLD = "#C5A46D";
-const CREAM = "#F5EFE3";
+const NAVY = "#3B2E38";
+const GOLD = "#C1A276";
+const CREAM = "#F2F2F2";
 
 type Tone = "light" | "dark";
 
@@ -52,7 +52,7 @@ export function BrandLogo({
   size?: "md" | "lg";
   className?: string;
 }) {
-  const text = tone === "light" ? "text-[#17324D]" : "text-[#F5EFE3]";
+  const text = tone === "light" ? "text-[#3B2E38]" : "text-[#F2F2F2]";
   const markSize = size === "lg" ? "size-16" : "size-11";
   const nameSize = size === "lg" ? "text-2xl" : "text-[17px]";
   const subSize = size === "lg" ? "text-[10px]" : "text-[8px]";
