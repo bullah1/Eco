@@ -238,3 +238,9 @@ GRANT EXECUTE ON FUNCTION public.get_available_rooms(date, date) TO anon, authen
 REVOKE UPDATE ON TABLE public.profiles FROM authenticated;
 GRANT UPDATE (display_name, phone, updated_at) ON TABLE public.profiles TO authenticated;
 
+
+-- ===== hardening (applied after the migrations above) =====
+REVOKE EXECUTE ON FUNCTION public.handle_new_guest() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.prepare_reservation() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated;
