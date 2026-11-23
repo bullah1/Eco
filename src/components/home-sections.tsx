@@ -1,6 +1,22 @@
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Check, MapPin, Mail, MessageCircle, Phone } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ConciergeBell,
+  Flame,
+  MapPin,
+  Mail,
+  MessageCircle,
+  Phone,
+  Ship,
+  UtensilsCrossed,
+  Waves,
+  Wifi,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +28,9 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { activities, facilities, faqs, packages, resortContact } from "@/lib/resort-content";
 import { experienceConcepts, stayConcepts } from "@/lib/resort-data";
+import { supabase } from "@/integrations/supabase/client";
+import { getRoomMedia } from "@/lib/room-media";
+import { formatMoney } from "@/lib/room-booking";
 import heroImage from "@/assets/sagara-coast-hero.jpg";
 
 function Index({ n, label, light = false }: { n: string; label: string; light?: boolean }) {
@@ -26,32 +45,171 @@ function Index({ n, label, light = false }: { n: string; label: string; light?: 
   );
 }
 
+const facilityIcons = [Waves, UtensilsCrossed, ConciergeBell, Wifi, Ship, Flame];
+
 export function FacilitiesSection() {
   return (
-    <section className="bg-background px-6 py-24 sm:px-10 lg:py-32">
-      <div className="mx-auto max-w-7xl">
-        <Index n="04" label="Facilities" />
-        <h2 className="mt-6 max-w-3xl text-5xl font-normal leading-[1.05] text-primary sm:text-6xl lg:text-7xl">
-          Everything for an easy stay
+    <section className="bg-primary px-6 py-24 text-resort-cream sm:px-10 lg:py-32">
+      <div className="mx-auto max-w-5xl">
+        <h2 className="text-5xl font-normal leading-[1.05] sm:text-6xl">
+          Our services and facilities
         </h2>
-        <ul className="mt-16 grid gap-x-16 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-          {facilities.map((item) => (
-            <li key={item.name} className="border-t border-border pt-6">
-              <h3 className="text-3xl font-normal text-primary">{item.name}</h3>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">{item.copy}</p>
-            </li>
-          ))}
+        <span className="mt-6 block h-px w-16 bg-resort-gold" />
+        <ul className="mt-16 grid gap-x-12 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+          {facilities.map((item, i) => {
+            const Icon = facilityIcons[i % facilityIcons.length] ?? Waves;
+            return (
+              <li key={item.name}>
+                <Icon size={40} strokeWidth={1} className="text-resort-gold" />
+                <h3 className="mt-5 text-3xl font-normal text-resort-cream">{item.name}</h3>
+                <p className="mt-2 text-sm leading-7 text-resort-cream/70">{item.copy}</p>
+              </li>
+            );
+          })}
         </ul>
-        <div className="mt-20 border-t border-border pt-10">
-          <p className="text-sm text-muted-foreground">Activities</p>
+        <div className="mt-20 border-t border-resort-cream/20 pt-10">
+          <p className="text-sm text-resort-cream/70">Activities</p>
           <ul className="mt-5 flex flex-wrap gap-3">
             {activities.map((name) => (
-              <li key={name} className="border border-border px-4 py-2 text-sm text-primary">
+              <li
+                key={name}
+                className="border border-resort-cream/25 px-4 py-2 text-sm text-resort-cream"
+              >
                 {name}
               </li>
             ))}
           </ul>
         </div>
+      </div>
+    </section>
+  );
+}
+
+export function HomeRooms() {
+  const scroller = useRef<HTMLDivElement>(null);
+  const query = useQuery({
+    queryKey: ["home-room-types"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("room_types")
+        .select("id, name, slug, description, image_url, max_guests, nightly_rate_cents")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+  const rooms = useMemo(() => {
+    const live = query.data ?? [];
+    return live.map((room, i) => ({
+      key: room.id,
+      name: room.name,
+      slug: room.slug,
+      description: room.description,
+      price: formatMoney(room.nightly_rate_cents),
+      image:
+        getRoomMedia(room.slug, room.image_url || undefined).photos[0] ??
+        stayConcepts[i % stayConcepts.length]?.image ??
+        "",
+      alt: `${room.name} at Santa Monica Eco Beach Resort`,
+    }));
+  }, [query.data]);
+  const scrollBy = (dir: number) =>
+    scroller.current?.scrollBy({ left: dir * 380, behavior: "smooth" });
+
+  return (
+    <section
+      className="border-y border-border bg-background px-6 py-24 sm:px-10 lg:py-32"
+      style={{ backgroundColor: "var(--secondary)" }}
+    >
+      <div className="mx-auto max-w-5xl">
+        <div className="flex items-end justify-between gap-6">
+          <div>
+            <h2 className="text-5xl font-normal leading-[1.05] text-primary sm:text-6xl">
+              Rooms and suites
+            </h2>
+            <span className="mt-6 block h-px w-16 bg-resort-gold" />
+            <p className="mt-6 text-sm text-muted-foreground">Pick the room that suits your stay</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              aria-label="Previous rooms"
+              onClick={() => scrollBy(-1)}
+              className="grid size-11 place-items-center border border-primary/30 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              aria-label="Next rooms"
+              onClick={() => scrollBy(1)}
+              className="grid size-11 place-items-center border border-primary/30 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+
+        {query.isLoading && (
+          <p role="status" className="mt-12 text-sm text-muted-foreground">
+            Loading rooms
+          </p>
+        )}
+        {query.isError && (
+          <p role="alert" className="mt-12 text-sm text-muted-foreground">
+            We couldn't load the rooms just now.{" "}
+            <button type="button" className="underline" onClick={() => query.refetch()}>
+              Try again
+            </button>
+          </p>
+        )}
+        {!query.isLoading && !query.isError && rooms.length === 0 && (
+          <p className="mt-12 max-w-md text-sm text-muted-foreground">
+            Rooms will appear here as soon as the resort publishes them. You can still send a
+            reservation request.
+          </p>
+        )}
+
+        {rooms.length > 0 && (
+          <div
+            ref={scroller}
+            className="mt-12 flex snap-x snap-mandatory gap-8 overflow-x-auto pb-4 [scrollbar-width:none]"
+          >
+            {rooms.map((room) => (
+              <article key={room.key} className="w-[min(86vw,420px)] shrink-0 snap-start">
+                <div className="sagara-image-frame aspect-[4/3]">
+                  {room.image ? (
+                    <img
+                      src={room.image}
+                      alt={room.alt}
+                      loading="lazy"
+                      className="size-full object-cover"
+                    />
+                  ) : null}
+                </div>
+                <h3 className="mt-6 text-3xl font-normal text-primary">{room.name}</h3>
+                <p className="mt-3 line-clamp-3 text-sm leading-7 text-muted-foreground">
+                  {room.description}
+                </p>
+                <div className="mt-6 flex items-end justify-between gap-4">
+                  <p>
+                    <span className="font-display text-3xl text-primary">{room.price}</span>
+                    <span className="block text-xs text-muted-foreground">Per night</span>
+                  </p>
+                  <Button
+                    asChild
+                    className="h-11 rounded-none bg-resort-gold px-6 text-xs tracking-[0.1em] text-primary hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <Link to="/rooms/$slug" params={{ slug: room.slug }}>
+                      DETAILS
+                    </Link>
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

@@ -4,9 +4,8 @@ import { ArrowRight, CalendarDays, Minus, Plus, Waves } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { experienceConcepts, firstStayConcept, stayConcepts } from "@/lib/resort-data";
-import { ContactFaqSection, FacilitiesSection, GallerySection, PackagesSection } from "@/components/home-sections";
-import { TextLink } from "@/components/resort-site";
+import { firstStayConcept, secondStayConcept } from "@/lib/resort-data";
+import { ContactFaqSection, FacilitiesSection, GallerySection, HomeRooms, PackagesSection } from "@/components/home-sections";
 import heroImage from "@/assets/sagara-coast-hero.jpg";
 
 export function HomePage() {
@@ -46,40 +45,23 @@ export function HomePage() {
         </form>
       </section>
 
-      <section className="bg-background px-6 py-24 sm:px-10 lg:py-40">
-        <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-[1.1fr_0.9fr] lg:gap-24">
-          <div>
-            <p className="flex items-center gap-4 text-sm text-muted-foreground"><span className="font-display text-xl text-resort-gold">01</span><span className="h-px w-10 bg-border"/>The island</p>
-            <h2 className="mt-10 max-w-2xl text-5xl font-normal leading-[1.05] text-primary sm:text-6xl lg:text-7xl">An island you cross by sea, and a beach at your door</h2>
-            <p className="mt-10 max-w-md text-base leading-8 text-muted-foreground">Saint Martin's sits at the south-eastern tip of the Bay of Bengal. Days here follow the tide: fishing boats out at dawn, palms along the beach, long evenings on the water.</p>
-            <div className="mt-10"><TextLink to="/experiences">See the experiences</TextLink></div>
+      <section className="bg-background px-6 py-24 sm:px-10 lg:py-36">
+        <div className="mx-auto max-w-5xl">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6">
+            <div className="sagara-image-frame aspect-[3/4]"><img src={firstStayConcept.image} alt={firstStayConcept.imageAlt} loading="lazy" width={1600} height={1067} className="size-full object-cover" /></div>
+            <div className="sagara-image-frame mt-10 aspect-[3/4] sm:mt-16"><img src={secondStayConcept.image} alt={secondStayConcept.imageAlt} loading="lazy" width={1600} height={1067} className="size-full object-cover" /></div>
           </div>
-          <figure className="lg:pt-24"><div className="sagara-image-frame aspect-[4/5]"><img src={firstStayConcept.image} alt={firstStayConcept.imageAlt} loading="lazy" width={1600} height={1067} className="size-full object-cover"/></div><figcaption className="mt-4 text-xs text-muted-foreground">Saint Martin's Island, Bay of Bengal</figcaption></figure>
-        </div>
-      </section>
-
-      <section className="border-t border-border bg-resort-cream px-6 py-24 sm:px-10 lg:py-32">
-        <div className="mx-auto max-w-7xl">
-          <p className="flex items-center gap-4 text-sm text-muted-foreground"><span className="font-display text-xl text-resort-gold">02</span><span className="h-px w-10 bg-border"/>Rooms</p>
-          <div className="mt-6 flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><h2 className="text-5xl font-normal leading-[1.05] text-primary sm:text-6xl lg:text-7xl">Where you will stay</h2><TextLink to="/stays">All rooms</TextLink></div>
-          <div className="mt-16 space-y-20 lg:space-y-28">
-            {stayConcepts.map((stay, index)=><article key={stay.name} className={`grid items-center gap-8 lg:grid-cols-12 lg:gap-16 ${index%2 ? "" : ""}`}>
-              <div className={`sagara-image-frame aspect-[4/3] lg:col-span-7 ${index%2 ? "lg:order-2" : ""}`}><img src={stay.image} alt={stay.imageAlt} loading="lazy" width={1600} height={1067} className="size-full object-cover"/></div>
-              <div className="lg:col-span-5"><p className="text-sm text-muted-foreground">Room 0{index+1} · {stay.category}</p><h3 className="mt-4 text-5xl font-normal leading-[1.05] text-primary lg:text-6xl">{stay.name}</h3><p className="mt-6 max-w-md text-base leading-8 text-muted-foreground">{stay.description}</p><p className="mt-4 text-sm text-resort-ocean">{stay.detail}</p><Link to="/booking" className="mt-8 inline-flex items-center gap-2 border-b border-resort-gold pb-1 text-sm text-primary transition-colors hover:text-resort-ocean">Check availability <ArrowRight size={14}/></Link></div>
-            </article>)}
+          <div className="mt-16 max-w-2xl">
+            <h2 className="text-5xl font-normal leading-[1.05] text-primary sm:text-6xl">Welcome to Santa Monica</h2>
+            <span className="mt-6 block h-px w-16 bg-resort-gold" />
+            <p className="mt-8 text-lg leading-8 text-primary/80">Saint Martin's sits at the south-eastern tip of the Bay of Bengal. Days here follow the tide: fishing boats out at dawn, palms along the beach, long evenings on the water.</p>
+            <p className="mt-4 text-base leading-8 text-muted-foreground">Santa Monica Eco Beach Resort is a quiet place to stay on Bangladesh's only coral island.</p>
+            <Button asChild className="mt-10 h-12 rounded-none bg-resort-gold px-8 text-sm tracking-[0.08em] text-primary hover:bg-primary hover:text-primary-foreground"><Link to="/stays">Know more</Link></Button>
           </div>
         </div>
       </section>
 
-      <section className="bg-primary px-6 py-24 text-resort-cream sm:px-10 lg:py-32">
-        <div className="mx-auto max-w-7xl">
-          <p className="flex items-center gap-4 text-sm text-resort-cream/70"><span className="font-display text-xl text-resort-gold">03</span><span className="h-px w-10 bg-resort-cream/25"/>Things to do</p>
-          <div className="mt-6 grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
-            <div><h2 className="text-5xl font-normal leading-[1.05] sm:text-6xl lg:text-7xl">Follow the tide</h2><p className="mt-8 max-w-sm text-base leading-8 text-resort-cream/75">Morning walks, boat trips, and dinner by the water.</p><div className="mt-8"><TextLink to="/experiences" light>Explore experiences</TextLink></div></div>
-            <div className="grid gap-6 sm:grid-cols-2">{experienceConcepts.map((item)=><article key={item.name}><div className="sagara-image-frame aspect-[4/5]"><img src={item.image} alt={item.imageAlt} loading="lazy" width={1600} height={1067} className="size-full object-cover"/></div><h3 className="mt-5 text-3xl font-normal text-resort-cream">{item.name}</h3><p className="mt-2 text-sm leading-6 text-resort-cream/70">{item.description}</p></article>)}</div>
-          </div>
-        </div>
-      </section>
+      <HomeRooms />
 
       <FacilitiesSection />
       <PackagesSection />
