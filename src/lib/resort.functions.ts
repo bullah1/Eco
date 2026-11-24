@@ -43,7 +43,7 @@ export const getMyReservations = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("reservations")
       .select(
-        "id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, room_units(name, room_types(name, slug)), reservation_addons(quantity, total_cents, resort_addons(name))",
+        "id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, room_units(name, room_types(name, slug)), reservation_addons(quantity, total_cents, service_date, resort_addons(name))",
       )
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false });
@@ -93,7 +93,7 @@ export const getAdminOverview = createServerFn({ method: "GET" })
         context.supabase
           .from("reservations")
           .select(
-            "id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, guest_name, guest_phone, guest_email, booking_group, room_units(name, room_types(name, slug)), profiles(display_name, email, phone), reservation_addons(quantity, total_cents, resort_addons(name))",
+            "id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, guest_name, guest_phone, guest_email, booking_group, room_units(name, room_types(name, slug)), profiles(display_name, email, phone), reservation_addons(quantity, total_cents, service_date, resort_addons(name))",
           )
           .order("created_at", { ascending: false }),
         context.supabase

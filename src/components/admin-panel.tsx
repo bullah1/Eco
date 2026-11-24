@@ -622,13 +622,20 @@ function BookingsAdmin({
                       {(
                         (item.reservation_addons ?? []) as {
                           quantity: number;
+                          service_date: string | null;
                           resort_addons: { name: string } | null;
                         }[]
-                      ).map((e, i) => (
-                        <span key={i} className="block text-xs text-muted-foreground">
-                          {e.resort_addons?.name} × {e.quantity}
-                        </span>
-                      ))}
+                      )
+                        .slice()
+                        .sort((x, y) => (x.service_date ?? "").localeCompare(y.service_date ?? ""))
+                        .map((e, i) => (
+                          <span key={i} className="block text-xs text-muted-foreground">
+                            {e.service_date
+                              ? `${new Date(`${e.service_date}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · `
+                              : ""}
+                            {e.resort_addons?.name} × {e.quantity}
+                          </span>
+                        ))}
                     </TableCell>
                     <TableCell>
                       <div className="grid gap-2">
