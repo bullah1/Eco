@@ -32,6 +32,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRoomMedia } from "@/lib/room-media";
 import { formatMoney } from "@/lib/room-booking";
 import heroImage from "@/assets/sagara-coast-hero.jpg";
+import poolUmbrellas from "@/assets/gallery/pool-umbrellas.jpg";
+import infinityPoolDusk from "@/assets/gallery/infinity-pool-dusk.jpg";
+import palmPoolBeach from "@/assets/gallery/palm-pool-beach.jpg";
+import aerialBeach from "@/assets/gallery/aerial-beach.jpg";
+import aerialLagoon from "@/assets/gallery/aerial-lagoon.jpg";
 
 function Index({ n, label, light = false }: { n: string; label: string; light?: boolean }) {
   return (
@@ -248,9 +253,26 @@ export function PackagesSection() {
 }
 
 const gallery = [
-  { src: heroImage, alt: "Wooden fishing boats on the water off Saint Martin's Island" },
-  ...stayConcepts.map((s) => ({ src: s.image, alt: s.imageAlt })),
-  ...experienceConcepts.map((s) => ({ src: s.image, alt: s.imageAlt })),
+  {
+    src: palmPoolBeach,
+    alt: "Pool, sun loungers and palms beside the sea",
+    span: "sm:col-span-2 sm:row-span-2",
+  },
+  { src: infinityPoolDusk, alt: "Infinity pool overlooking the sea at dusk", span: "" },
+  { src: aerialBeach, alt: "Aerial view of the beach, pools and shaded loungers", span: "" },
+  {
+    src: poolUmbrellas,
+    alt: "Sun loungers and umbrellas by the pool and sea",
+    span: "sm:col-span-2",
+  },
+  {
+    src: aerialLagoon,
+    alt: "Aerial view of a lagoon ringed by sea cottages",
+    span: "sm:col-span-2",
+  },
+  { src: heroImage, alt: "Wooden fishing boats on the water off Saint Martin's Island", span: "" },
+  ...stayConcepts.map((s) => ({ src: s.image, alt: s.imageAlt, span: "" })),
+  ...experienceConcepts.map((s) => ({ src: s.image, alt: s.imageAlt, span: "" })),
 ].filter((item, i, all) => all.findIndex((x) => x.src === item.src) === i);
 
 export function GallerySection() {
@@ -265,14 +287,14 @@ export function GallerySection() {
         <h2 className="mt-6 text-5xl font-normal leading-[1.05] text-primary sm:text-6xl lg:text-7xl">
           The coast in pictures
         </h2>
-        <ul className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-16 grid auto-rows-[220px] grid-flow-dense gap-3 sm:grid-cols-2 lg:auto-rows-[260px] lg:grid-cols-4">
           {gallery.map((item, i) => (
-            <li key={item.src}>
+            <li key={item.src} className={i >= gallery.length - 2 ? "lg:col-span-2" : item.span}>
               <button
                 type="button"
                 onClick={() => setOpen(i)}
                 aria-label={`Open photo: ${item.alt}`}
-                className="sagara-image-frame block aspect-[4/5] w-full"
+                className="sagara-image-frame block size-full"
               >
                 <img
                   src={item.src}
