@@ -8,6 +8,8 @@ import {
   LogOut,
   ShieldCheck,
   ShoppingBag,
+  ChefHat,
+  UtensilsCrossed,
   Users,
   Wifi,
   WifiOff,
@@ -153,6 +155,18 @@ function Frame({ children }: { children: ReactNode }) {
       label: "Guests",
       Icon: Users,
       active: pathname.startsWith("/pos/guests") || pathname.startsWith("/pos/account"),
+    },
+    {
+      to: "/pos/restaurant",
+      label: "Restaurant",
+      Icon: UtensilsCrossed,
+      active: pathname.startsWith("/pos/restaurant"),
+    },
+    {
+      to: "/pos/kitchen",
+      label: "Kitchen",
+      Icon: ChefHat,
+      active: pathname.startsWith("/pos/kitchen"),
     },
     {
       to: "/pos/orders",

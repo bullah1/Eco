@@ -23,7 +23,9 @@ import { Route as PosRouteImport } from './routes/pos'
 import { Route as StaysRouteImport } from './routes/stays'
 import { Route as PosIndexRouteImport } from './routes/pos.index'
 import { Route as PosGuestsRouteImport } from './routes/pos.guests'
+import { Route as PosKitchenRouteImport } from './routes/pos.kitchen'
 import { Route as PosOrdersRouteImport } from './routes/pos.orders'
+import { Route as PosRestaurantRouteImport } from './routes/pos.restaurant'
 import { Route as PosStaffRouteImport } from './routes/pos.staff'
 import { Route as RoomsSlugRouteImport } from './routes/rooms.$slug'
 import { Route as PosAccountIdRouteImport } from './routes/pos.account.$id'
@@ -98,9 +100,19 @@ const PosGuestsRoute = PosGuestsRouteImport.update({
   path: '/guests',
   getParentRoute: () => PosRoute,
 } as any)
+const PosKitchenRoute = PosKitchenRouteImport.update({
+  id: '/kitchen',
+  path: '/kitchen',
+  getParentRoute: () => PosRoute,
+} as any)
 const PosOrdersRoute = PosOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosRestaurantRoute = PosRestaurantRouteImport.update({
+  id: '/restaurant',
+  path: '/restaurant',
   getParentRoute: () => PosRoute,
 } as any)
 const PosStaffRoute = PosStaffRouteImport.update({
@@ -133,7 +145,9 @@ export interface FileRoutesByFullPath {
   '/pos': typeof PosRouteWithChildren
   '/stays': typeof StaysRoute
   '/pos/guests': typeof PosGuestsRoute
+  '/pos/kitchen': typeof PosKitchenRoute
   '/pos/orders': typeof PosOrdersRoute
+  '/pos/restaurant': typeof PosRestaurantRoute
   '/pos/staff': typeof PosStaffRoute
   '/rooms/$slug': typeof RoomsSlugRoute
   '/pos/': typeof PosIndexRoute
@@ -152,7 +166,9 @@ export interface FileRoutesByTo {
   '/order': typeof OrderRoute
   '/stays': typeof StaysRoute
   '/pos/guests': typeof PosGuestsRoute
+  '/pos/kitchen': typeof PosKitchenRoute
   '/pos/orders': typeof PosOrdersRoute
+  '/pos/restaurant': typeof PosRestaurantRoute
   '/pos/staff': typeof PosStaffRoute
   '/rooms/$slug': typeof RoomsSlugRoute
   '/pos': typeof PosIndexRoute
@@ -173,7 +189,9 @@ export interface FileRoutesById {
   '/pos': typeof PosRouteWithChildren
   '/stays': typeof StaysRoute
   '/pos/guests': typeof PosGuestsRoute
+  '/pos/kitchen': typeof PosKitchenRoute
   '/pos/orders': typeof PosOrdersRoute
+  '/pos/restaurant': typeof PosRestaurantRoute
   '/pos/staff': typeof PosStaffRoute
   '/rooms/$slug': typeof RoomsSlugRoute
   '/pos/': typeof PosIndexRoute
@@ -195,7 +213,9 @@ export interface FileRouteTypes {
     | '/pos'
     | '/stays'
     | '/pos/guests'
+    | '/pos/kitchen'
     | '/pos/orders'
+    | '/pos/restaurant'
     | '/pos/staff'
     | '/rooms/$slug'
     | '/pos/'
@@ -214,7 +234,9 @@ export interface FileRouteTypes {
     | '/order'
     | '/stays'
     | '/pos/guests'
+    | '/pos/kitchen'
     | '/pos/orders'
+    | '/pos/restaurant'
     | '/pos/staff'
     | '/rooms/$slug'
     | '/pos'
@@ -234,7 +256,9 @@ export interface FileRouteTypes {
     | '/pos'
     | '/stays'
     | '/pos/guests'
+    | '/pos/kitchen'
     | '/pos/orders'
+    | '/pos/restaurant'
     | '/pos/staff'
     | '/rooms/$slug'
     | '/pos/'
@@ -357,11 +381,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosGuestsRouteImport
       parentRoute: typeof PosRoute
     }
+    '/pos/kitchen': {
+      id: '/pos/kitchen'
+      path: '/kitchen'
+      fullPath: '/pos/kitchen'
+      preLoaderRoute: typeof PosKitchenRouteImport
+      parentRoute: typeof PosRoute
+    }
     '/pos/orders': {
       id: '/pos/orders'
       path: '/orders'
       fullPath: '/pos/orders'
       preLoaderRoute: typeof PosOrdersRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/restaurant': {
+      id: '/pos/restaurant'
+      path: '/restaurant'
+      fullPath: '/pos/restaurant'
+      preLoaderRoute: typeof PosRestaurantRouteImport
       parentRoute: typeof PosRoute
     }
     '/pos/staff': {
@@ -390,7 +428,9 @@ declare module '@tanstack/react-router' {
 
 interface PosRouteChildren {
   PosGuestsRoute: typeof PosGuestsRoute
+  PosKitchenRoute: typeof PosKitchenRoute
   PosOrdersRoute: typeof PosOrdersRoute
+  PosRestaurantRoute: typeof PosRestaurantRoute
   PosStaffRoute: typeof PosStaffRoute
   PosIndexRoute: typeof PosIndexRoute
   PosAccountIdRoute: typeof PosAccountIdRoute
@@ -398,7 +438,9 @@ interface PosRouteChildren {
 
 const PosRouteChildren: PosRouteChildren = {
   PosGuestsRoute: PosGuestsRoute,
+  PosKitchenRoute: PosKitchenRoute,
   PosOrdersRoute: PosOrdersRoute,
+  PosRestaurantRoute: PosRestaurantRoute,
   PosStaffRoute: PosStaffRoute,
   PosIndexRoute: PosIndexRoute,
   PosAccountIdRoute: PosAccountIdRoute,

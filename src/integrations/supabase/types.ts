@@ -146,6 +146,47 @@ export type Database = {
         }
         Relationships: []
       }
+      kitchen_tickets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          items: Json
+          kot_no: string
+          status: string
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items: Json
+          kot_no?: string
+          status?: string
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items?: Json
+          kot_no?: string
+          status?: string
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_tickets_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
           category: string
@@ -340,6 +381,155 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      restaurant_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          method: string
+          received_by: string | null
+          reference: string
+          ticket_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          method: string
+          received_by?: string | null
+          reference?: string
+          ticket_id: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          method?: string
+          received_by?: string | null
+          reference?: string
+          ticket_id?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: []
+      }
+      restaurant_tables: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      restaurant_ticket_items: {
+        Row: {
+          created_at: string
+          id: string
+          menu_item_id: string | null
+          name: string
+          quantity: number
+          sent_qty: number
+          ticket_id: string
+          unit_price_cents: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          menu_item_id?: string | null
+          name: string
+          quantity: number
+          sent_qty?: number
+          ticket_id: string
+          unit_price_cents: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          menu_item_id?: string | null
+          name?: string
+          quantity?: number
+          sent_qty?: number
+          ticket_id?: string
+          unit_price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_ticket_items_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_tickets: {
+        Row: {
+          account_id: string | null
+          cancel_reason: string | null
+          closed_at: string | null
+          closed_by: string | null
+          id: string
+          label: string
+          note: string
+          opened_at: string
+          opened_by: string | null
+          status: string
+          table_id: string | null
+          ticket_no: string
+        }
+        Insert: {
+          account_id?: string | null
+          cancel_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          id?: string
+          label?: string
+          note?: string
+          opened_at?: string
+          opened_by?: string | null
+          status?: string
+          table_id?: string | null
+          ticket_no?: string
+        }
+        Update: {
+          account_id?: string | null
+          cancel_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          id?: string
+          label?: string
+          note?: string
+          opened_at?: string
+          opened_by?: string | null
+          status?: string
+          table_id?: string | null
+          ticket_no?: string
+        }
+        Relationships: []
       }
       resort_addons: {
         Row: {
@@ -715,6 +905,16 @@ export type Database = {
       }
     }
     Functions: {
+      pos_cancel_ticket: { Args: { p_reason: string; p_ticket: string }; Returns: undefined }
+      pos_open_ticket: { Args: { p_label: string; p_table: string | null }; Returns: string }
+      pos_save_table: { Args: { p_active: boolean; p_id: string | null; p_name: string }; Returns: string }
+      pos_send_kot: { Args: { p_ticket: string }; Returns: string }
+      pos_set_kot_status: { Args: { p_kot: string; p_status: string }; Returns: undefined }
+      pos_set_web_order_status: { Args: { p_order: string; p_status: string }; Returns: undefined }
+      pos_ticket_charge_room: { Args: { p_account: string; p_ticket: string }; Returns: number }
+      pos_ticket_pay: { Args: { p_method: string; p_reference: string; p_ticket: string }; Returns: number }
+      pos_ticket_set_item: { Args: { p_menu_item: string; p_quantity: number; p_ticket: string }; Returns: undefined }
+      pos_ticket_set_note: { Args: { p_label: string; p_note: string; p_ticket: string }; Returns: undefined }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       pos_add_charge: {
         Args: {
