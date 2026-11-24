@@ -57,7 +57,7 @@ const goldButton =
 
 /* ---------- Rooms ---------- */
 
-export function HomeRooms() {
+export function HomeRooms({ layout = "carousel" }: { layout?: "carousel" | "grid" } = {}) {
   const scroller = useRef<HTMLDivElement>(null);
   const query = useQuery({
     queryKey: ["home-room-types"],
@@ -96,11 +96,11 @@ export function HomeRooms() {
       <div className={wrap}>
         <Reveal className="flex flex-wrap items-end justify-between gap-6">
           <SectionHeading
-            eyebrow="Stay"
-            title="Rooms and suites"
+            eyebrow={layout === "grid" ? "All rooms" : "Stay"}
+            title={layout === "grid" ? "Find the right room" : "Rooms and suites"}
             copy="Pick the room that suits your stay. Prices are per night."
           />
-          {rooms.length > 3 && (
+          {layout === "carousel" && rooms.length > 3 && (
             <div className="flex gap-2">
               {[
                 { dir: -1, label: "Previous rooms", Icon: ChevronLeft },
@@ -173,14 +173,22 @@ export function HomeRooms() {
         {rooms.length > 0 && (
           <div
             ref={scroller}
-            className="-mx-6 mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0"
+            className={
+              layout === "grid"
+                ? "mt-12 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3"
+                : "-mx-6 mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0"
+            }
           >
             {rooms.map((room, i) => (
               <Reveal
                 key={room.key}
                 delay={i * 80}
                 as="article"
-                className="group w-[78vw] shrink-0 snap-start sm:w-[calc((100%-24px)/2)] lg:w-[calc((100%-72px)/4)]"
+                className={
+                  layout === "grid"
+                    ? "group"
+                    : "group w-[78vw] shrink-0 snap-start sm:w-[calc((100%-24px)/2)] lg:w-[calc((100%-72px)/4)]"
+                }
               >
                 <Link to="/rooms/$slug" params={{ slug: room.slug }} className="block">
                   <div className="sagara-image-frame aspect-[4/3]">

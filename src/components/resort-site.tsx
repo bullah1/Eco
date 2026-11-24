@@ -10,13 +10,17 @@ import { useCurrentUser } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { resortContact } from "@/lib/resort-content";
 
-type NavItem = { label: string; to: "/" | "/stays" | "/gallery" | "/contact"; hash?: string };
+type NavItem = {
+  label: string;
+  to: "/" | "/stays" | "/experiences" | "/gallery" | "/contact";
+  hash?: string;
+};
 
 const navigation: NavItem[] = [
   { label: "Home", to: "/" },
   { label: "Rooms", to: "/stays" },
-  { label: "Dining", to: "/", hash: "dining" },
-  { label: "Activities", to: "/", hash: "activities" },
+  { label: "Dining", to: "/experiences", hash: "dining" },
+  { label: "Activities", to: "/experiences" },
   { label: "Gallery", to: "/gallery" },
   { label: "Contact", to: "/contact" },
 ];
@@ -253,10 +257,14 @@ export function ResortFooter() {
             <Link to="/stays" className="transition-colors hover:text-resort-gold">
               Rooms
             </Link>
-            <Link to="/" hash="dining" className="transition-colors hover:text-resort-gold">
+            <Link
+              to="/experiences"
+              hash="dining"
+              className="transition-colors hover:text-resort-gold"
+            >
               Dining
             </Link>
-            <Link to="/" hash="activities" className="transition-colors hover:text-resort-gold">
+            <Link to="/experiences" className="transition-colors hover:text-resort-gold">
               Activities
             </Link>
             <Link to="/gallery" className="transition-colors hover:text-resort-gold">
