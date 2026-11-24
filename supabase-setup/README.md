@@ -19,3 +19,4 @@
    (already applied on the current project).
 8. For in-stay food and service orders (pending bills for the POS), run `in-stay-orders.sql`
    (already applied on the current project).
+9. For meals and extras chosen per day, run `dated-extras.sql` (already applied on the current project).

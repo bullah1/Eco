@@ -117,6 +117,7 @@ export type Database = {
           id: string
           quantity: number
           reservation_id: string
+          service_date: string | null
           total_cents: number
           unit_price_cents: number
         }
@@ -126,6 +127,7 @@ export type Database = {
           id?: string
           quantity: number
           reservation_id: string
+          service_date?: string | null
           total_cents?: number
           unit_price_cents?: number
         }
@@ -135,6 +137,7 @@ export type Database = {
           id?: string
           quantity?: number
           reservation_id?: string
+          service_date?: string | null
           total_cents?: number
           unit_price_cents?: number
         }

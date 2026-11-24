@@ -310,8 +310,13 @@ function MobileTabBar() {
 
 export function ResortFooter() {
   const c = resortContact;
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Phones keep the booking flow focused: no footer under the fixed action bar.
+  const inBooking = pathname.startsWith("/booking");
   return (
-    <footer className="bg-resort-wood pb-20 text-resort-cream lg:pb-0">
+    <footer
+      className={`bg-resort-wood pb-20 text-resort-cream lg:block lg:pb-0 ${inBooking ? "hidden" : ""}`}
+    >
       <div className="mx-auto grid max-w-[1240px] grid-cols-2 gap-x-6 gap-y-10 px-6 py-14 sm:gap-12 sm:px-8 sm:py-16 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:py-20">
         <div className="col-span-2 lg:col-span-1">
           <BrandLogo tone="dark" size="lg" />

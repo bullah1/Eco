@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/resort-site";
-import { BookingFlow } from "@/components/booking-flow";
+import { BookingFlow } from "@/components/booking-wizard";
 
 type BookingSearch = {
   checkIn?: string;
