@@ -199,7 +199,7 @@ export function HomeRooms({ layout = "carousel" }: { layout?: "carousel" | "grid
                 <div className="flex min-w-0 flex-1 flex-col">
                   <h3 className="truncate text-lg leading-tight text-primary">{room.name}</h3>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    Up to {room.guests} guests{room.bed ? ` · ${room.bed}` : ""}
+                    Up to {room.guests} guests · Breakfast included
                   </p>
                   <p className="mt-1">
                     <span className="font-display text-lg tabular-nums text-primary">
@@ -344,9 +344,9 @@ export function DiningSection() {
             />
           </div>
           <div className="absolute -bottom-6 right-4 hidden max-w-[240px] sm:block bg-primary p-6 text-primary-foreground sm:right-8">
-            <p className="font-display text-lg">Add meals when you book</p>
+            <p className="font-display text-lg">Breakfast is on us</p>
             <p className="mt-2 text-xs leading-5 text-primary-foreground/70">
-              Choose breakfast, lunch or a BBQ dinner with your room
+              Every room includes breakfast. Order lunch, dinner or a BBQ during your stay
             </p>
           </div>
         </Reveal>
@@ -367,8 +367,8 @@ export function DiningSection() {
             ))}
           </ul>
           <Button asChild className={`mt-10 ${goldButton} h-12 px-8`}>
-            <Link to="/booking">
-              Book with meals <ArrowRight size={15} />
+            <Link to="/order">
+              See the menu <ArrowRight size={15} />
             </Link>
           </Button>
         </Reveal>
@@ -478,7 +478,8 @@ export function PackagesSection() {
           </h2>
           <span className="mt-5 block h-px w-12 bg-resort-wood/40" />
           <p className="mt-5 max-w-xl text-[15px] leading-7 text-resort-wood/75">
-            Rooms, meals and activities together for one price. Ask the resort for the current rate.
+            Rooms, breakfast and activities together for one price. Ask the resort for the current
+            rate.
           </p>
         </Reveal>
         <Reveal className={`mt-10 sm:mt-12 ${swipeRow} sm:grid-cols-2 lg:grid-cols-3`}>
@@ -723,7 +724,7 @@ export function FinalCta() {
           Plan your stay by the sea
         </h2>
         <p className="mx-auto mt-5 max-w-md text-[15px] leading-7 text-resort-cream/75">
-          Choose your dates, rooms and meals. The resort confirms every request.
+          Choose your dates and rooms, breakfast included. The resort confirms every request.
         </p>
         <Button
           asChild

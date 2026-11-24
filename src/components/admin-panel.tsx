@@ -188,12 +188,6 @@ export function AdminPage() {
                 </TabsTrigger>
                 <TabsTrigger
                   className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-resort-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                  value="addons"
-                >
-                  <UtensilsCrossed size={15} /> Meals & extras
-                </TabsTrigger>
-                <TabsTrigger
-                  className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-resort-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   value="reviews"
                 >
                   <Star size={15} /> Reviews
@@ -224,9 +218,6 @@ export function AdminPage() {
               </TabsContent>
               <TabsContent value="reviews" className="mt-0">
                 <ReviewsAdmin items={data.reviews} panelKey="reviews" />
-              </TabsContent>
-              <TabsContent value="addons" className="mt-0">
-                <AddonsAdmin items={data.addons} panelKey="addons" />
               </TabsContent>
               <TabsContent value="gallery" className="mt-0">
                 <GalleryAdmin items={data.gallery} panelKey="gallery" />

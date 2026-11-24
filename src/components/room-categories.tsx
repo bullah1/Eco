@@ -3,6 +3,7 @@ import {
   ArrowRight,
   BedDouble,
   Check,
+  Coffee,
   Eye,
   Images,
   Maximize2,
@@ -22,6 +23,7 @@ export function RoomSpecs({ room, light = false }: { room: RoomType; light?: boo
     room.bed_type && { Icon: BedDouble, label: room.bed_type },
     room.room_size_sqft && { Icon: Maximize2, label: `${room.room_size_sqft} sq ft` },
     room.view_label && { Icon: Eye, label: room.view_label },
+    { Icon: Coffee, label: "Breakfast included" },
   ].filter(Boolean) as { Icon: typeof Users; label: string }[];
   return (
     <ul

@@ -43,12 +43,13 @@ export const Route = createFileRoute("/booking")({
       {
         name: "description",
         content:
-          "Choose your dates, rooms and meals and send a reservation request to Santa Monica Eco Beach Resort on Saint Martin's Island.",
+          "Choose your dates and rooms, breakfast included, and send a reservation request to Santa Monica Eco Beach Resort on Saint Martin's Island.",
       },
       { property: "og:title", content: "Book Your Stay | Santa Monica Eco Beach Resort" },
       {
         property: "og:description",
-        content: "Choose your dates, rooms and meals, see the bill, and send your request.",
+        content:
+          "Choose your dates and rooms, see the bill, and send your request. Breakfast included.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

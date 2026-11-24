@@ -24,7 +24,7 @@ export const heroSlides = [
     image: coastHero,
     alt: "Wooden fishing boats on the turquoise water off Saint Martin's Island",
     title: "Stay by the sea on Saint Martin's",
-    copy: "An eco beach resort on Bangladesh's only coral island. Pick your dates, choose your rooms and add meals before you arrive.",
+    copy: "An eco beach resort on Bangladesh's only coral island. Pick your dates and rooms, with breakfast included every morning.",
   },
   {
     image: aerialBeach,
@@ -43,7 +43,7 @@ export const heroSlides = [
 export const welcome = {
   title: "Welcome to Santa Monica",
   lead: "A quiet place to stay on Saint Martin's, at the south-eastern tip of the Bay of Bengal",
-  copy: "Days here follow the tide: fishing boats out at dawn, palms along the beach and long evenings on the water. Choose a room, add meals and activities when you book, and the resort confirms everything with you directly.",
+  copy: "Days here follow the tide: fishing boats out at dawn, palms along the beach and long evenings on the water. Choose a room, breakfast is included, and the resort confirms everything with you directly.",
   images: [
     { src: palmPoolBeach, alt: "Pool, sun loungers and palms beside the sea" },
     { src: leaningPalm, alt: "A coconut palm leaning over the sandy shore" },
@@ -67,7 +67,7 @@ export const facilities = [
 
 export const dining = {
   title: "Fresh from the island",
-  copy: "The resort kitchen cooks with fish landed on the island each morning and vegetables from the mainland. Add meals to your stay when you book, or order at the restaurant.",
+  copy: "The resort kitchen cooks with fish landed on the island each morning and vegetables from the mainland. Breakfast comes with every room. Order other meals from your phone or at the restaurant.",
   image: {
     src: boatsShallow,
     alt: "Fishing boats resting in the shallow water off Saint Martin's",
@@ -201,8 +201,8 @@ export const faqs = [
     a: "Check-in is from 2:00 PM and check-out is by 12:00 noon. Ask the resort if you need an early arrival or a late departure.",
   },
   {
-    q: "Can I add meals and activities when I book?",
-    a: "Yes. After choosing your rooms you can add breakfast, lunch, dinner, a speedboat trip and other services. The resort confirms them with your stay.",
+    q: "Is breakfast included?",
+    a: "Yes, breakfast is included with every room. Lunch, dinner, a speedboat trip and other services can be ordered during your stay from the Order page or at the front desk.",
   },
   {
     q: "What is the cancellation policy?",

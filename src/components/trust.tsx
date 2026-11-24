@@ -1,12 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
-import {
-  BedDouble,
-  MessageCircle,
-  Phone,
-  UserRoundCheck,
-  UtensilsCrossed,
-  Wallet,
-} from "lucide-react";
+import { BedDouble, MessageCircle, Phone, UserRoundCheck, Coffee, Wallet } from "lucide-react";
 
 import { resortContact } from "@/lib/resort-content";
 
@@ -19,9 +12,9 @@ const promises = [
   },
   { Icon: BedDouble, title: "Rooms held for you", copy: "While the resort confirms your request" },
   {
-    Icon: UtensilsCrossed,
-    title: "Meals and trips in one go",
-    copy: "Add them to the same booking",
+    Icon: Coffee,
+    title: "Breakfast included",
+    copy: "Every morning with your room",
   },
 ];
 

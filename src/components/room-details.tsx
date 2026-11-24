@@ -301,9 +301,7 @@ export function RoomDetails({ slug }: { slug: string }) {
                 {formatMoney(total)}
               </span>
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Meals and extras are added in the next steps
-            </p>
+            <p className="mt-2 text-xs text-muted-foreground">Breakfast included every morning</p>
           </div>
 
           <Button
@@ -351,7 +349,10 @@ export function RoomDetails({ slug }: { slug: string }) {
           <h3 className="mt-8 text-lg text-primary">Good to know</h3>
           <ul className="mt-4 grid gap-2 text-sm text-muted-foreground">
             <li>Check-in from 2:00 PM, check-out by 12:00 noon</li>
-            <li>Meals, boat trips and other extras can be added when you book</li>
+            <li>
+              Breakfast is included. Other meals, boat trips and services can be ordered during your
+              stay
+            </li>
             <li>The resort confirms every request before your stay</li>
           </ul>
         </section>
