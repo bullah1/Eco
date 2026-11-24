@@ -47,7 +47,7 @@ function Stepper({
         type="button"
         variant="ghost"
         size="icon"
-        className="size-9 rounded-none"
+        className="size-10 rounded-none"
         aria-label={`Fewer ${label}`}
         disabled={value <= min}
         onClick={() => onChange(value - 1)}
@@ -61,7 +61,7 @@ function Stepper({
         type="button"
         variant="ghost"
         size="icon"
-        className="size-9 rounded-none"
+        className="size-10 rounded-none"
         aria-label={`More ${label}`}
         disabled={value >= max}
         onClick={() => onChange(value + 1)}
@@ -147,11 +147,11 @@ export function RoomDetails({ slug }: { slug: string }) {
             aria-label="Breadcrumb"
             className="flex items-center gap-1.5 text-[13px] text-muted-foreground"
           >
-            <Link to="/" className="hover:text-resort-ocean">
+            <Link to="/" className="py-2 hover:text-resort-ocean">
               Home
             </Link>
             <ChevronRight size={13} />
-            <Link to="/stays" className="hover:text-resort-ocean">
+            <Link to="/stays" className="py-2 hover:text-resort-ocean">
               Rooms
             </Link>
             <ChevronRight size={13} />
@@ -176,8 +176,8 @@ export function RoomDetails({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <div className="mx-auto mt-10 grid max-w-[1180px] gap-8 px-6 sm:px-8 lg:grid-cols-[1fr_380px]">
-        <div className="min-w-0">
+      <div className="mx-auto mt-6 grid max-w-[1180px] gap-6 px-6 sm:mt-10 sm:gap-8 sm:px-8 lg:grid-cols-[1fr_380px]">
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
           {tabs.length > 1 && (
             <div className="mb-3 flex flex-wrap gap-2" role="tablist" aria-label="Room media">
               {tabs.map(({ key, label, Icon }) => (
@@ -215,42 +215,13 @@ export function RoomDetails({ slug }: { slug: string }) {
               <PhotoGallery photos={media.photos} name={room.name} />
             )}
           </div>
-
-          <section className="mt-8 bg-resort-white p-6 sm:p-8">
-            <h2 className="text-2xl text-primary">About this room</h2>
-            <span className="gold-rule mt-4" />
-            <div className="mt-6">
-              <RoomSpecs room={room} />
-            </div>
-            {room.description && (
-              <p className="mt-6 text-[15px] leading-7 text-muted-foreground">{room.description}</p>
-            )}
-            {room.features.length > 0 && (
-              <>
-                <h3 className="mt-8 text-lg text-primary">In the room</h3>
-                <ul className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                  {room.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-foreground">
-                      <Check size={15} className="mt-0.5 shrink-0 text-resort-gold-deep" /> {f}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            <h3 className="mt-8 text-lg text-primary">Good to know</h3>
-            <ul className="mt-4 grid gap-2 text-sm text-muted-foreground">
-              <li>Check-in from 2:00 PM, check-out by 12:00 noon</li>
-              <li>Meals, boat trips and other extras can be added when you book</li>
-              <li>The resort confirms every request before your stay</li>
-            </ul>
-          </section>
         </div>
 
-        <aside className="h-fit bg-resort-white p-6 lg:sticky lg:top-24">
+        <aside className="h-fit bg-resort-white p-6 lg:sticky lg:top-24 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <p className="text-[13px] font-medium text-resort-ocean">Book this room</p>
           <p className="mt-1 font-display text-2xl text-primary">{room.name}</p>
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="min-w-0 text-xs font-medium text-muted-foreground">
               Arrival
               <input
                 type="date"
@@ -263,7 +234,7 @@ export function RoomDetails({ slug }: { slug: string }) {
                 }}
               />
             </label>
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="min-w-0 text-xs font-medium text-muted-foreground">
               Departure
               <input
                 type="date"
@@ -273,7 +244,7 @@ export function RoomDetails({ slug }: { slug: string }) {
                 onChange={(e) => setCheckOut(e.target.value)}
               />
             </label>
-            <div className="text-xs font-medium text-muted-foreground">
+            <div className="min-w-0 text-xs font-medium text-muted-foreground">
               Rooms
               <Stepper
                 label="rooms"
@@ -283,7 +254,7 @@ export function RoomDetails({ slug }: { slug: string }) {
                 onChange={setCount}
               />
             </div>
-            <div className="text-xs font-medium text-muted-foreground">
+            <div className="min-w-0 text-xs font-medium text-muted-foreground">
               Guests
               <Stepper
                 label="guests"
@@ -355,6 +326,35 @@ export function RoomDetails({ slug }: { slug: string }) {
             </Link>
           </Button>
         </aside>
+
+        <section className="min-w-0 bg-resort-white p-6 sm:p-8 lg:col-start-1 lg:row-start-2">
+          <h2 className="text-2xl text-primary">About this room</h2>
+          <span className="gold-rule mt-4" />
+          <div className="mt-6">
+            <RoomSpecs room={room} />
+          </div>
+          {room.description && (
+            <p className="mt-6 text-[15px] leading-7 text-muted-foreground">{room.description}</p>
+          )}
+          {room.features.length > 0 && (
+            <>
+              <h3 className="mt-8 text-lg text-primary">In the room</h3>
+              <ul className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                {room.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-foreground">
+                    <Check size={15} className="mt-0.5 shrink-0 text-resort-gold-deep" /> {f}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <h3 className="mt-8 text-lg text-primary">Good to know</h3>
+          <ul className="mt-4 grid gap-2 text-sm text-muted-foreground">
+            <li>Check-in from 2:00 PM, check-out by 12:00 noon</li>
+            <li>Meals, boat trips and other extras can be added when you book</li>
+            <li>The resort confirms every request before your stay</li>
+          </ul>
+        </section>
       </div>
 
       {(others.data?.length ?? 0) > 1 && (

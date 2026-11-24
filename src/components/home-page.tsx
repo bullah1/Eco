@@ -155,7 +155,7 @@ function BookingBar() {
           noValidate
           className="sagara-booking-bar grid grid-cols-2 gap-3 bg-resort-white p-4 sm:gap-4 sm:p-6 lg:grid-cols-[1fr_1fr_0.7fr_0.7fr_auto] lg:items-end"
         >
-          <label className="text-xs font-medium text-muted-foreground">
+          <label className="min-w-0 text-xs font-medium text-muted-foreground">
             Arrival date
             <input
               type="date"
@@ -168,7 +168,7 @@ function BookingBar() {
               }}
             />
           </label>
-          <label className="text-xs font-medium text-muted-foreground">
+          <label className="min-w-0 text-xs font-medium text-muted-foreground">
             Departure date
             <input
               type="date"
@@ -178,7 +178,7 @@ function BookingBar() {
               onChange={(e) => setCheckOut(e.target.value)}
             />
           </label>
-          <label className="text-xs font-medium text-muted-foreground">
+          <label className="min-w-0 text-xs font-medium text-muted-foreground">
             Adults
             <select
               className={field}
@@ -192,7 +192,7 @@ function BookingBar() {
               ))}
             </select>
           </label>
-          <label className="text-xs font-medium text-muted-foreground">
+          <label className="min-w-0 text-xs font-medium text-muted-foreground">
             Children
             <select
               className={field}

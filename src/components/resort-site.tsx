@@ -242,6 +242,8 @@ function MobileBookBar() {
   }, [onHome]);
   if (pathname.startsWith("/booking") || pathname.startsWith("/admin")) return null;
   const show = !onHome || pastHero;
+  const roomSlug = pathname.match(/^\/rooms\/([a-z0-9-]+)/)?.[1];
+
   return (
     <div
       aria-hidden={!show}
@@ -252,9 +254,15 @@ function MobileBookBar() {
         className="h-12 w-full rounded-none bg-resort-gold text-resort-wood hover:bg-primary hover:text-primary-foreground"
         asChild
       >
-        <Link to="/booking">
-          Book now <ArrowRight size={15} />
-        </Link>
+        {roomSlug ? (
+          <Link to="/booking" search={{ room: roomSlug, rooms: 1 }}>
+            Book this room <ArrowRight size={15} />
+          </Link>
+        ) : (
+          <Link to="/booking">
+            Book now <ArrowRight size={15} />
+          </Link>
+        )}
       </Button>
     </div>
   );

@@ -32,7 +32,7 @@ function PageHero({
   alt: string;
 }) {
   return (
-    <section className="relative isolate flex min-h-[340px] items-end overflow-hidden bg-resort-wood lg:min-h-[420px]">
+    <section className="relative isolate flex min-h-[280px] items-end overflow-hidden bg-resort-wood sm:min-h-[340px] lg:min-h-[420px]">
       <img
         src={image}
         alt={alt}
@@ -43,21 +43,23 @@ function PageHero({
         className="absolute inset-0 -z-10"
         style={{
           background:
-            "linear-gradient(0deg, color-mix(in oklab, var(--resort-wood) 85%, transparent) 0%, color-mix(in oklab, var(--resort-wood) 45%, transparent) 60%, color-mix(in oklab, var(--resort-wood) 30%, transparent) 100%)",
+            "linear-gradient(0deg, color-mix(in oklab, var(--resort-wood) 88%, transparent) 0%, color-mix(in oklab, var(--resort-wood) 55%, transparent) 60%, color-mix(in oklab, var(--resort-wood) 40%, transparent) 100%)",
         }}
       />
-      <div className="hero-copy-in mx-auto w-full max-w-[1180px] px-6 pb-14 pt-24 text-resort-cream sm:px-8 lg:pb-16">
+      <div className="hero-copy-in mx-auto w-full max-w-[1180px] px-6 pb-10 pt-16 text-resort-cream sm:px-8 sm:pb-14 sm:pt-24 lg:pb-16">
         <nav
           aria-label="Breadcrumb"
           className="flex items-center gap-1.5 text-[13px] text-resort-cream/75"
         >
-          <Link to="/" className="transition-colors hover:text-resort-gold">
+          <Link to="/" className="py-2 transition-colors hover:text-resort-gold">
             Home
           </Link>
           <Crumb size={13} />
           <span className="text-resort-cream">{crumb}</span>
         </nav>
-        <h1 className="mt-4 text-[38px] font-medium leading-[1.1] sm:text-[52px]">{title}</h1>
+        <h1 className="mt-2 text-[34px] font-medium leading-[1.1] sm:mt-4 sm:text-[52px]">
+          {title}
+        </h1>
         <p className="mt-4 max-w-xl text-[15px] leading-7 text-resort-cream/80">{copy}</p>
       </div>
     </section>
@@ -122,7 +124,7 @@ export function GalleryPage() {
         image={heroSlides[0]!.image}
         alt={heroSlides[0]!.alt}
       />
-      <section className="bg-resort-white px-6 py-20 sm:px-8 lg:py-24">
+      <section className="bg-resort-white px-4 py-10 sm:px-8 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-[1180px]">
           <div
             role="tablist"
@@ -150,14 +152,14 @@ export function GalleryPage() {
           </div>
           <ul
             key={filter ?? "all"}
-            className="mt-12 grid auto-rows-[220px] grid-flow-dense gap-3 sm:grid-cols-2 lg:auto-rows-[260px] lg:grid-cols-4"
+            className="mt-8 grid auto-rows-[150px] grid-cols-2 grid-flow-dense gap-2 sm:mt-12 sm:auto-rows-[220px] sm:gap-3 lg:auto-rows-[260px] lg:grid-cols-4"
           >
             {photos.map((photo, i) => (
               <Reveal
                 as="li"
                 key={photo.alt}
                 delay={(i % 4) * 70}
-                className={i % 5 === 0 ? "sm:col-span-2 sm:row-span-2" : ""}
+                className={i % 5 === 0 ? "col-span-2 row-span-2" : ""}
               >
                 <button
                   type="button"

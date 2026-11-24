@@ -302,7 +302,7 @@ export function AuthScreen() {
             {mode === "signin" ? "New here?" : "Already have an account?"}{" "}
             <button
               type="button"
-              className="font-semibold text-primary underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 items-center font-semibold text-primary underline-offset-4 hover:underline"
               onClick={() => {
                 setMode(mode === "signin" ? "signup" : "signin");
                 setNotice("");

@@ -124,9 +124,9 @@ export function RoomCategories() {
           <section
             key={room.id}
             id={room.slug}
-            className={`scroll-mt-24 px-6 py-20 sm:px-8 lg:py-24 ${flip ? "bg-resort-cream" : "bg-resort-white"}`}
+            className={`scroll-mt-24 px-6 py-12 sm:px-8 sm:py-20 lg:py-24 ${flip ? "bg-resort-cream" : "bg-resort-white"}`}
           >
-            <div className="mx-auto grid max-w-[1180px] items-center gap-10 lg:grid-cols-2 lg:gap-16">
+            <div className="mx-auto grid max-w-[1180px] items-center gap-6 sm:gap-10 lg:grid-cols-2 lg:gap-16">
               <Reveal className={`group relative ${flip ? "lg:order-2" : ""}`}>
                 <Link
                   to="/rooms/$slug"
@@ -168,8 +168,11 @@ export function RoomCategories() {
                 )}
                 {room.features.length > 0 && (
                   <ul className="mt-6 grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
-                    {room.features.slice(0, 6).map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm text-foreground">
+                    {room.features.slice(0, 6).map((f, fi) => (
+                      <li
+                        key={f}
+                        className={`${fi >= 4 ? "hidden sm:flex" : "flex"} items-start gap-2 text-sm text-foreground`}
+                      >
                         <Check size={15} className="mt-0.5 shrink-0 text-resort-gold-deep" />
                         {f}
                       </li>

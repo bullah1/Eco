@@ -267,7 +267,7 @@ export function BookingFlow() {
 
   return (
     <div className="min-h-[70svh] bg-resort-cream pb-24">
-      <div className="border-b border-border bg-resort-white px-5 py-10 sm:px-8 lg:py-12">
+      <div className="border-b border-border bg-resort-white px-5 py-7 sm:px-8 sm:py-10 lg:py-12">
         <div className="mx-auto max-w-[1180px]">
           <p className="text-[13px] font-medium text-resort-ocean">Reservation request</p>
           <h1 className="mt-2 text-[34px] leading-tight text-primary sm:text-[44px]">
@@ -298,8 +298,8 @@ export function BookingFlow() {
         </div>
       </div>
 
-      <div className="mx-auto mt-10 grid max-w-[1180px] gap-8 px-5 sm:px-8 lg:grid-cols-[1fr_360px]">
-        <section className="min-w-0 bg-resort-white p-6 sm:p-9">
+      <div className="mx-auto mt-5 grid max-w-[1180px] gap-8 px-4 sm:mt-10 sm:px-8 lg:grid-cols-[1fr_360px]">
+        <section className="min-w-0 bg-resort-white p-5 sm:p-9">
           {step === 1 && (
             <>
               {presetType && (
@@ -314,13 +314,13 @@ export function BookingFlow() {
                 title="When are you coming?"
                 copy="Choose your dates and how many people are travelling."
               />
-              <div className="mt-8 grid gap-5 sm:grid-cols-3">
-                <div className="grid gap-2">
+              <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5">
+                <div className="grid min-w-0 gap-2">
                   <Label htmlFor="arrival">Arrival</Label>
                   <Input
                     id="arrival"
                     type="date"
-                    className="h-11 rounded-none"
+                    className="h-11 min-w-0 rounded-none px-2 text-base sm:px-3 sm:text-sm"
                     min={todayDate()}
                     value={checkIn}
                     onChange={(event) => {
@@ -329,25 +329,25 @@ export function BookingFlow() {
                     }}
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="grid min-w-0 gap-2">
                   <Label htmlFor="departure">Departure</Label>
                   <Input
                     id="departure"
                     type="date"
-                    className="h-11 rounded-none"
+                    className="h-11 min-w-0 rounded-none px-2 text-base sm:px-3 sm:text-sm"
                     min={checkIn || todayDate()}
                     value={checkOut}
                     onChange={(event) => setCheckOut(event.target.value)}
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="col-span-2 grid gap-2 sm:col-span-1">
                   <Label htmlFor="guests">Guests</Label>
                   <div className="flex h-11 items-center justify-between border border-input px-2">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-8"
+                      className="size-10"
                       aria-label="Fewer guests"
                       onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
                     >
@@ -360,7 +360,7 @@ export function BookingFlow() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-8"
+                      className="size-10"
                       aria-label="More guests"
                       onClick={() => setGuestCount(Math.min(6, guestCount + 1))}
                     >
@@ -457,7 +457,7 @@ export function BookingFlow() {
                                 to="/rooms/$slug"
                                 params={{ slug: type.slug }}
                                 target="_blank"
-                                className="text-xs text-resort-ocean underline-offset-4 hover:underline"
+                                className="inline-flex min-h-10 items-center text-xs text-resort-ocean underline-offset-4 hover:underline"
                               >
                                 Photos, 360° and details
                               </Link>
@@ -709,7 +709,7 @@ export function BookingFlow() {
                   <Link
                     to="/auth"
                     search={{ next: "/booking", checkIn, checkOut, guests: guestCount }}
-                    className="text-resort-ocean underline-offset-4 hover:underline"
+                    className="inline-flex min-h-11 items-center text-resort-ocean underline-offset-4 hover:underline"
                   >
                     Sign in
                   </Link>{" "}
@@ -916,7 +916,7 @@ export function BookingFlow() {
         </section>
 
         {step < 6 && (
-          <aside className="h-fit bg-resort-white p-6 lg:sticky lg:top-24">
+          <aside className="hidden h-fit bg-resort-white p-6 lg:sticky lg:top-24 lg:block">
             <p className="text-[13px] font-medium text-resort-ocean">Your stay</p>
             {checkIn && checkOut && checkOut > checkIn ? (
               <p className="mt-2 font-display text-xl text-primary">
@@ -1103,7 +1103,7 @@ export function GuestStaysPage() {
   });
   return (
     <div className="min-h-[70svh] bg-resort-cream pb-24">
-      <div className="border-b border-border bg-resort-white px-5 py-10 sm:px-8 lg:py-12">
+      <div className="border-b border-border bg-resort-white px-5 py-7 sm:px-8 sm:py-10 lg:py-12">
         <div className="mx-auto max-w-[1000px]">
           <p className="text-[13px] font-medium text-resort-ocean">Your account</p>
           <h1 className="mt-2 text-[34px] leading-tight text-primary sm:text-[44px]">My stays</h1>
@@ -1134,7 +1134,7 @@ export function GuestStaysPage() {
               <Link
                 to="/auth"
                 search={{ next: "/my-stays" }}
-                className="text-resort-ocean underline-offset-4 hover:underline"
+                className="inline-flex min-h-11 items-center text-resort-ocean underline-offset-4 hover:underline"
               >
                 Sign in
               </Link>{" "}
