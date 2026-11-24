@@ -10,6 +10,17 @@ import infinityPoolDusk from "@/assets/gallery/infinity-pool-dusk.jpg";
 import palmPoolBeach from "@/assets/gallery/palm-pool-beach.jpg";
 import aerialBeach from "@/assets/gallery/aerial-beach.jpg";
 import aerialLagoon from "@/assets/gallery/aerial-lagoon.jpg";
+// Gemini-generated placeholders. Swap for the resort's own photos before launch.
+import genHeroBeach from "@/assets/generated/hero-beach.jpg";
+import genHeroSunset from "@/assets/generated/hero-sunset.jpg";
+import genDining from "@/assets/generated/dining-table.jpg";
+import genSpeedboat from "@/assets/generated/speedboat.jpg";
+import genBonfire from "@/assets/generated/bonfire.jpg";
+import genIndoor from "@/assets/generated/indoor-games.jpg";
+import genDeluxe from "@/assets/rooms/deluxe-sea-view/01-room.jpg";
+import genFamily from "@/assets/rooms/family-suite/01-room.jpg";
+import genCottage from "@/assets/rooms/eco-cottage/01-cottage.jpg";
+import genStandard from "@/assets/rooms/standard-double/01-room.jpg";
 
 export const resortContact = {
   address: "",
@@ -21,8 +32,8 @@ export const resortContact = {
 
 export const heroSlides = [
   {
-    image: coastHero,
-    alt: "Wooden fishing boats on the turquoise water off Saint Martin's Island",
+    image: genHeroBeach,
+    alt: "Thatched cottages behind the palms on a white beach at golden hour",
     title: "Stay by the sea on Saint Martin's",
     copy: "An eco beach resort on Bangladesh's only coral island. Pick your dates and rooms, with breakfast included every morning.",
   },
@@ -33,8 +44,8 @@ export const heroSlides = [
     copy: "Rooms close to the shore, a pool by the beach and the Bay of Bengal on the horizon.",
   },
   {
-    image: palmsShore,
-    alt: "Tall coconut palms along the beach beside the sea",
+    image: genHeroSunset,
+    alt: "Resort cottages lit up among the palms at sunset",
     title: "Days on the water, evenings by the fire",
     copy: "Speedboat trips, beach games, music nights and a bonfire under the palms.",
   },
@@ -46,7 +57,7 @@ export const welcome = {
   copy: "Days here follow the tide: fishing boats out at dawn, palms along the beach and long evenings on the water. Choose a room, breakfast is included, and the resort confirms everything with you directly.",
   images: [
     { src: palmPoolBeach, alt: "Pool, sun loungers and palms beside the sea" },
-    { src: leaningPalm, alt: "A coconut palm leaning over the sandy shore" },
+    { src: genCottage, alt: "An eco cottage with a veranda among the palms" },
   ],
 };
 
@@ -69,8 +80,8 @@ export const dining = {
   title: "Fresh from the island",
   copy: "The resort kitchen cooks with fish landed on the island each morning and vegetables from the mainland. Breakfast comes with every room. Order other meals from your phone or at the restaurant.",
   image: {
-    src: boatsShallow,
-    alt: "Fishing boats resting in the shallow water off Saint Martin's",
+    src: genDining,
+    alt: "Grilled fish, prawns, rice and dal on a table by the sea",
   },
   menu: [
     { name: "Breakfast", copy: "Paratha, eggs, bhaji, fruit and tea" },
@@ -84,7 +95,7 @@ export const activities = [
   {
     name: "Speedboat sea trip",
     copy: "Ride out past the coral to Chhera Dwip and back along the coast.",
-    image: { src: coastHero, alt: "Boats on the turquoise water off Saint Martin's" },
+    image: { src: genSpeedboat, alt: "A speedboat crossing the turquoise sea off Saint Martin's" },
   },
   {
     name: "Beach games",
@@ -94,14 +105,19 @@ export const activities = [
   {
     name: "Music night",
     copy: "Live songs and guitar on the lawn after dinner.",
-    image: { src: infinityPoolDusk, alt: "The resort lawn and pool at dusk" },
+    image: { src: genHeroSunset, alt: "The resort at dusk" },
   },
   {
     name: "BBQ and bonfire",
     copy: "A fire on the beach, grilled food and the sound of the sea.",
-    image: { src: palmsShore, alt: "Coconut palms along the beach at the end of the day" },
+    image: { src: genBonfire, alt: "A bonfire on the beach under string lights at night" },
   },
 ];
+
+export const indoorGamesImage = {
+  src: genIndoor,
+  alt: "The games lounge with carrom, chess and table tennis",
+};
 
 export const indoorGames = [
   { name: "Carrom", copy: "Boards in the lounge for two or four players" },
@@ -117,19 +133,19 @@ export const packages = [
     name: "Couple package",
     copy: "Two nights for two, breakfast each morning and a beach dinner.",
     validity: "Year round, subject to availability",
-    image: { src: infinityPoolDusk, alt: "The pool at dusk" },
+    image: { src: genHeroSunset, alt: "The beach at sunset" },
   },
   {
     name: "Family package",
     copy: "Connected rooms, all meals and a speedboat trip for the family.",
     validity: "Year round, subject to availability",
-    image: { src: poolUmbrellas, alt: "Loungers and umbrellas by the pool" },
+    image: { src: genFamily, alt: "A family suite opening onto the palms" },
   },
   {
     name: "Group package",
     copy: "Rooms, meals and a BBQ night arranged for larger groups.",
     validity: "On request",
-    image: { src: aerialBeach, alt: "Aerial view of the beach" },
+    image: { src: genBonfire, alt: "A bonfire night on the beach" },
   },
 ];
 
@@ -147,14 +163,33 @@ export const travelGuide = [
   {
     title: "What to see on the island",
     copy: "Chhera Dwip at low tide, the west beach at sunset and the fishing boats in the morning.",
-    image: { src: leaningPalm, alt: "A palm leaning over the beach" },
+    image: { src: genSpeedboat, alt: "A speedboat heading out past the coral" },
   },
 ];
 
 export const galleryCategories = [
   {
+    name: "Rooms",
+    photos: [
+      { src: genDeluxe, alt: "Deluxe sea view room with a king bed" },
+      { src: genFamily, alt: "Family suite with doors onto the palms" },
+      { src: genCottage, alt: "Eco cottage with a thatched roof" },
+      { src: genStandard, alt: "Standard double room in the evening" },
+    ],
+  },
+  {
+    name: "Food and fun",
+    photos: [
+      { src: genDining, alt: "Seafood lunch on a table by the sea" },
+      { src: genSpeedboat, alt: "Speedboat trip on the turquoise sea" },
+      { src: genBonfire, alt: "Bonfire night on the beach" },
+      { src: genIndoor, alt: "The indoor games lounge" },
+    ],
+  },
+  {
     name: "Beach",
     photos: [
+      { src: genHeroBeach, alt: "Cottages behind the palms on a white beach" },
       { src: palmsShore, alt: "Coconut palms along the beach beside the sea" },
       { src: leaningPalm, alt: "A coconut palm leaning over the sandy shore" },
       { src: aerialBeach, alt: "Aerial view of the beach and shaded loungers" },
@@ -185,6 +220,7 @@ export const galleryCategories = [
   {
     name: "Evenings",
     photos: [
+      { src: genHeroSunset, alt: "The resort at sunset from the water's edge" },
       { src: infinityPoolDusk, alt: "The pool and sea at dusk" },
       { src: palmsShore, alt: "Palms along the shore late in the day" },
     ],

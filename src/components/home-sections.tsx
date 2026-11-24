@@ -41,6 +41,7 @@ import {
   galleryCategories,
   heroSlides,
   indoorGames,
+  indoorGamesImage,
   packages,
   resortContact,
   travelGuide,
@@ -437,6 +438,14 @@ export function IndoorGamesSection() {
             title="Games for rainy days and late evenings"
             copy="The lounge has games for every age. Ask at the front desk for boards, bats and cards."
           />
+          <div className="sagara-image-frame mt-8 aspect-[16/10]">
+            <img
+              src={indoorGamesImage.src}
+              alt={indoorGamesImage.alt}
+              loading="lazy"
+              className="size-full object-cover"
+            />
+          </div>
         </Reveal>
         <ul className="grid grid-cols-3 border-l border-t border-resort-cream/15">
           {indoorGames.map((game, i) => {
