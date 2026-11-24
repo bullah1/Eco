@@ -47,7 +47,7 @@ const prettyDate = (d: string, f = "EEE, d MMM yyyy") => format(new Date(`${d}T1
 const STORAGE_KEY = "santa-monica-booking-draft";
 
 const primaryBtn =
-  "h-12 rounded-none bg-primary px-7 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-resort-gold hover:text-resort-wood";
+  "h-12 rounded-none bg-resort-gold px-7 text-[13px] font-medium text-resort-wood transition-colors hover:bg-primary hover:text-primary-foreground disabled:bg-resort-sand disabled:text-muted-foreground";
 const ghostBtn = "h-12 rounded-none px-4 text-[13px] text-foreground";
 
 type Draft = {
@@ -91,7 +91,8 @@ export function BookingFlow() {
   const [chosen, setChosen] = useState<Record<string, number>>({});
   const [note, setNote] = useState("");
   const [bookedRooms, setBookedRooms] = useState<{ title: string; reference: string }[]>([]);
-  const [extrasWarning, setExtrasWarning] = useState("");
+  const [bookedPhone, setBookedPhone] = useState("");
+  const [contact, setContact] = useState({ name: "", phone: "", email: "" });
   const [message, setMessage] = useState("");
 
   // Bring back rooms and extras chosen before a guest left to sign in.
@@ -210,55 +211,39 @@ export function BookingFlow() {
 
   const createReservation = useMutation({
     mutationFn: async () => {
-      if (!user || selectedRooms.length === 0 || !allocation)
-        throw new Error("Sign in and select your rooms before continuing.");
-      const rows = selectedRooms.map((room, index) => ({
-        user_id: user.id,
-        room_unit_id: room.room_unit_id,
-        check_in: checkIn,
-        check_out: checkOut,
-        guest_count: allocation[index] ?? 1,
-        guest_note: note.trim(),
-      }));
-      const { data, error } = await supabase
-        .from("reservations")
-        .insert(rows)
-        .select("id, booking_reference, room_unit_id");
+      if (selectedRooms.length === 0 || !allocation)
+        throw new Error("Please choose your rooms before sending the request.");
+      const rooms = roomLines.map((line) => ({ room_type_id: line.type.id, count: line.count }));
+      const extras = lines.map((l) => ({ addon_id: l.addon.id, count: chosen[l.addon.id] ?? 0 }));
+      const { data, error } = await supabase.rpc("create_booking", {
+        p_check_in: checkIn,
+        p_check_out: checkOut,
+        p_guests: guestCount,
+        p_rooms: rooms,
+        p_addons: extras,
+        p_name: contact.name,
+        p_phone: contact.phone,
+        p_email: contact.email,
+        p_note: note,
+      });
       if (error) {
-        if (error.code === "23P01")
-          throw new Error(
-            "One of those rooms was just reserved for these dates. Please review your rooms and try again.",
-          );
-        if (error.code === "23514")
-          throw new Error("One of the rooms can't accommodate this number of guests.");
-        throw new Error("We couldn't save this reservation. Please check the dates and try again.");
-      }
-      let warning = "";
-      const first = data[0];
-      if (first && lines.length > 0) {
-        const { error: extrasError } = await supabase.from("reservation_addons").insert(
-          lines.map((l) => ({
-            reservation_id: first.id,
-            addon_id: l.addon.id,
-            quantity: l.quantity,
-          })),
+        if (error.code === "P0002") {
+          void roomQuery.refetch();
+          throw new Error(error.message);
+        }
+        if (error.code === "P0001") throw new Error(error.message);
+        throw new Error(
+          "We couldn't send your request. Please check your connection and try again.",
         );
-        if (extrasError)
-          warning =
-            "Your rooms are requested, but the meals and extras couldn't be saved. Please mention them to the resort.";
       }
-      return {
-        warning,
-        rooms: selectedRooms.map((room) => ({
-          title: `${room.type_name} · ${room.room_name}`,
-          reference:
-            data.find((row) => row.room_unit_id === room.room_unit_id)?.booking_reference ?? "",
-        })),
-      };
+      return (data ?? []).map((row) => ({
+        title: `${row.type_name} · ${row.unit_name}`,
+        reference: row.reference,
+      }));
     },
-    onSuccess: async (result) => {
-      setBookedRooms(result.rooms);
-      setExtrasWarning(result.warning);
+    onSuccess: async (rooms) => {
+      setBookedRooms(rooms);
+      setBookedPhone(contact.phone);
       setMessage("");
       setStep(6);
       try {
@@ -269,7 +254,7 @@ export function BookingFlow() {
       await queryClient.invalidateQueries({ queryKey: ["my-stays"] });
     },
     onError: (error) =>
-      setMessage(error instanceof Error ? error.message : "We couldn't save your reservation."),
+      setMessage(error instanceof Error ? error.message : "We couldn't send your request."),
   });
 
   const steps = ["Dates", "Rooms", "Meals & extras", "Your details", "Review"];
@@ -715,27 +700,21 @@ export function BookingFlow() {
               <StepTitle
                 step={4}
                 title="Your details"
-                copy="So the resort can confirm your stay."
+                copy="No account needed. The resort uses these to confirm your stay."
               />
-              {!user ? (
-                <div className="mt-8 border border-border bg-resort-cream p-6">
-                  <UserRound size={22} className="text-resort-ocean" />
-                  <p className="mt-3 text-xl text-primary">Sign in to send your request</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Your rooms and extras are kept while you sign in. Your account keeps your
-                    bookings in one place.
-                  </p>
-                  <Button className={`mt-5 ${primaryBtn}`} asChild>
-                    <Link
-                      to="/auth"
-                      search={{ next: "/booking", checkIn, checkOut, guests: guestCount }}
-                    >
-                      Sign in or create an account <ArrowRight size={14} />
-                    </Link>
-                  </Button>
-                </div>
-              ) : (
-                <GuestDetails onContinue={() => setStep(5)} />
+              <GuestDetails value={contact} onChange={setContact} onContinue={() => setStep(5)} />
+              {!user && (
+                <p className="mt-6 text-xs text-muted-foreground">
+                  Have an account?{" "}
+                  <Link
+                    to="/auth"
+                    search={{ next: "/booking", checkIn, checkOut, guests: guestCount }}
+                    className="text-resort-ocean underline-offset-4 hover:underline"
+                  >
+                    Sign in
+                  </Link>{" "}
+                  to keep all your bookings in one place. Your choices are kept.
+                </p>
               )}
               <div className="mt-8">
                 <Button variant="ghost" className={ghostBtn} onClick={() => setStep(3)}>
@@ -748,12 +727,14 @@ export function BookingFlow() {
           {step === 5 && selectedRooms.length > 0 && allocation && (
             <>
               <StepTitle step={5} title="Review your request" />
-              <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-y border-border py-6 text-sm sm:grid-cols-4">
+              <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-y border-border py-6 text-sm sm:grid-cols-3">
                 {[
                   ["Arrival", prettyDate(checkIn)],
                   ["Departure", prettyDate(checkOut)],
                   ["Length", nightWord],
                   ["Guests", guestWord],
+                  ["Name", contact.name],
+                  ["Mobile", contact.phone],
                 ].map(([key, value]) => (
                   <div key={key}>
                     <dt className="text-muted-foreground">{key}</dt>
@@ -870,22 +851,20 @@ export function BookingFlow() {
           )}
 
           {step === 6 && (
-            <div className="py-6 text-center sm:py-12">
-              <span className="mx-auto grid size-16 place-items-center rounded-full bg-resort-ocean-soft text-resort-ocean">
-                <CircleCheck size={30} />
-              </span>
-              <h2 className="mt-6 text-[32px] text-primary">Thank you, your request is in</h2>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-muted-foreground">
-                The resort will contact you to confirm your rooms, meals and payment.
-              </p>
-              {extrasWarning && (
-                <p role="alert" className="mx-auto mt-4 max-w-md text-sm text-destructive">
-                  {extrasWarning}
+            <div className="py-6 sm:py-10">
+              <div className="text-center">
+                <span className="mx-auto grid size-16 place-items-center rounded-full bg-resort-ocean-soft text-resort-ocean">
+                  <CircleCheck size={30} />
+                </span>
+                <h2 className="mt-6 text-[32px] text-primary">Thank you, your request is in</h2>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-muted-foreground">
+                  Your rooms are held for these dates while the resort reviews your request.
                 </p>
-              )}
-              <div className="mx-auto mt-8 max-w-sm border-y border-border py-5">
+              </div>
+              <div className="mx-auto mt-8 max-w-sm border-y border-border py-5 text-center">
                 <p className="text-xs font-medium text-muted-foreground">
-                  {bookedRooms.length > 1 ? "Your references" : "Your reference"}
+                  {bookedRooms.length > 1 ? "Your references" : "Your reference"} · keep{" "}
+                  {bookedRooms.length > 1 ? "them" : "it"} safe
                 </p>
                 {bookedRooms.map((item) => (
                   <div key={item.reference} className="mt-3">
@@ -898,9 +877,35 @@ export function BookingFlow() {
                   </div>
                 ))}
               </div>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <ol className="mx-auto mt-8 grid max-w-lg gap-4">
+                {[
+                  [
+                    "The resort reviews your request",
+                    "Rooms, dates, meals and extras are checked.",
+                  ],
+                  [
+                    `You get a call or message on ${bookedPhone || "your phone"}`,
+                    "To confirm your stay and explain how to pay.",
+                  ],
+                  [
+                    "Your booking is confirmed",
+                    "Check its status any time with your reference and phone number.",
+                  ],
+                ].map(([title, copy], i) => (
+                  <li key={title} className="flex gap-4">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-sm text-primary-foreground tabular-nums">
+                      {i + 1}
+                    </span>
+                    <span>
+                      <span className="block font-medium text-primary">{title}</span>
+                      <span className="block text-sm text-muted-foreground">{copy}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-10 flex flex-wrap justify-center gap-3">
                 <Button className={primaryBtn} asChild>
-                  <Link to="/my-stays">My stays</Link>
+                  <Link to="/my-stays">Check booking status</Link>
                 </Button>
                 <Button variant="outline" className="h-12 rounded-none" asChild>
                   <Link to="/">Back to home</Link>
@@ -966,76 +971,111 @@ export function BookingFlow() {
             </p>
           </aside>
         )}
+        {step > 1 && step < 6 && selectedRooms.length > 0 && (
+          <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-4 border-t border-border bg-resort-white/95 px-5 py-3 backdrop-blur lg:hidden">
+            <span className="text-xs text-muted-foreground">
+              {roomWord(selectedRooms.length)} · {nightWord}
+              {lines.length > 0 ? " · extras" : ""}
+            </span>
+            <span className="text-right">
+              <span className="block text-[11px] text-muted-foreground">Estimated total</span>
+              <span className="font-display text-xl tabular-nums text-primary">
+                {formatMoney(grandTotal)}
+              </span>
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function GuestDetails({ onContinue }: { onContinue: () => void }) {
-  const queryClient = useQueryClient();
+type Contact = { name: string; phone: string; email: string };
+
+const phonePattern = /^\+?[0-9-]{7,20}$/;
+
+function GuestDetails({
+  value,
+  onChange,
+  onContinue,
+}: {
+  value: Contact;
+  onChange: (next: Contact) => void;
+  onContinue: () => void;
+}) {
   const user = useCurrentUser();
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile } = useQuery({
     queryKey: ["guest-profile", user?.id],
     queryFn: () => getGuestProfile(),
     enabled: Boolean(user),
   });
-  const [displayName, setDisplayName] = useState<string | null>(null);
-  const [phone, setPhone] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  // Signed-in guests start with their saved name, phone and email.
+  useEffect(() => {
+    if (!profile && !user) return;
+    onChange({
+      name: value.name || profile?.display_name || "",
+      phone: value.phone || profile?.phone || "",
+      email: value.email || user?.email || "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, user]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user) return;
+    const phone = value.phone.replace(/\s+/g, "");
+    if (value.name.trim().length < 2) return setError("Please enter your full name");
+    if (!phonePattern.test(phone))
+      return setError("Please enter a valid mobile number, e.g. 01712 345678");
+    if (value.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.email.trim()))
+      return setError("Please check your email address, or leave it empty");
     setError("");
-    const nextName = displayName ?? profile?.display_name ?? "";
-    const nextPhone = phone ?? profile?.phone ?? "";
-    const { error: saveError } = await supabase
-      .from("profiles")
-      .update({ display_name: nextName.trim(), phone: nextPhone.trim() })
-      .eq("id", user.id);
-    if (saveError) {
-      setError("We couldn't save your details. Please try again.");
-      return;
-    }
-    await queryClient.invalidateQueries({ queryKey: ["guest-profile", user.id] });
+    onChange({ ...value, name: value.name.trim(), phone, email: value.email.trim() });
     onContinue();
   }
 
   return (
-    <form onSubmit={submit} className="mt-8 grid gap-5 sm:grid-cols-2">
+    <form onSubmit={submit} noValidate className="mt-8 grid gap-5 sm:grid-cols-2">
       <div className="grid gap-2 sm:col-span-2">
-        <Label htmlFor="guest-email">Email</Label>
-        <Input
-          id="guest-email"
-          type="email"
-          value={user?.email ?? ""}
-          readOnly
-          className="h-11 rounded-none bg-muted"
-        />
-      </div>
-      <div className="grid gap-2">
         <Label htmlFor="guest-name">Full name</Label>
         <Input
           id="guest-name"
           autoComplete="name"
-          className="h-11 rounded-none"
-          value={displayName ?? profile?.display_name ?? ""}
-          onChange={(event) => setDisplayName(event.target.value)}
+          className="h-12 rounded-none"
+          value={value.name}
+          onChange={(event) => onChange({ ...value, name: event.target.value })}
           required
-          disabled={isLoading}
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="guest-phone">Phone</Label>
+        <Label htmlFor="guest-phone">Mobile number</Label>
         <Input
           id="guest-phone"
           type="tel"
+          inputMode="tel"
           autoComplete="tel"
-          className="h-11 rounded-none"
-          value={phone ?? profile?.phone ?? ""}
-          onChange={(event) => setPhone(event.target.value)}
+          placeholder="01712 345678"
+          className="h-12 rounded-none"
+          value={value.phone}
+          onChange={(event) => onChange({ ...value, phone: event.target.value })}
           required
-          disabled={isLoading}
+        />
+        <span className="text-xs text-muted-foreground">
+          The resort calls this number to confirm
+        </span>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="guest-email">
+          Email <span className="font-normal text-muted-foreground">(optional)</span>
+        </Label>
+        <Input
+          id="guest-email"
+          type="email"
+          autoComplete="email"
+          className="h-12 rounded-none"
+          value={value.email}
+          onChange={(event) => onChange({ ...value, email: event.target.value })}
         />
       </div>
       {error && (
@@ -1044,7 +1084,7 @@ function GuestDetails({ onContinue }: { onContinue: () => void }) {
         </p>
       )}
       <div className="sm:col-span-2">
-        <Button type="submit" disabled={isLoading} className={primaryBtn}>
+        <Button type="submit" className={primaryBtn}>
           Continue to review <ArrowRight size={15} />
         </Button>
       </div>
@@ -1087,18 +1127,20 @@ export function GuestStaysPage() {
           </p>
         )}
         {!user && (
-          <div className="bg-resort-white p-8">
-            <UserRound size={24} className="text-resort-ocean" />
-            <h2 className="mt-4 text-2xl text-primary">Sign in to see your stays</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Your reservation requests are kept in your account.
+          <>
+            <BookingLookup />
+            <p className="mt-6 text-sm text-muted-foreground">
+              Have an account?{" "}
+              <Link
+                to="/auth"
+                search={{ next: "/my-stays" }}
+                className="text-resort-ocean underline-offset-4 hover:underline"
+              >
+                Sign in
+              </Link>{" "}
+              to see all your stays.
             </p>
-            <Button className={`mt-6 ${primaryBtn}`} asChild>
-              <Link to="/auth" search={{ next: "/my-stays" }}>
-                Sign in <ArrowRight size={15} />
-              </Link>
-            </Button>
-          </div>
+          </>
         )}
         {user && !isLoading && !isError && data?.length === 0 && (
           <div className="bg-resort-white p-8">
@@ -1173,6 +1215,122 @@ export function GuestStaysPage() {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+type FoundBooking = {
+  reference: string;
+  status: "pending" | "confirmed" | "cancelled";
+  check_in: string;
+  check_out: string;
+  guest_count: number;
+  type_name: string;
+  room_total_cents: number;
+  extras_total_cents: number;
+  extras: string;
+};
+
+const statusText = {
+  pending: "Waiting for the resort to confirm",
+  confirmed: "Confirmed",
+  cancelled: "Cancelled",
+} as const;
+
+function BookingLookup() {
+  const [reference, setReference] = useState("");
+  const [phone, setPhone] = useState("");
+  const [result, setResult] = useState<FoundBooking[] | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setResult(null);
+    if (!reference.trim() || !phone.trim())
+      return setError("Enter your reference and mobile number");
+    setLoading(true);
+    const { data, error: lookupError } = await supabase.rpc("find_booking", {
+      p_reference: reference,
+      p_phone: phone,
+    });
+    setLoading(false);
+    if (lookupError) return setError("We couldn't check right now. Please try again.");
+    if (!data || data.length === 0)
+      return setError("No booking matches that reference and number. Check both and try again.");
+    setResult(data as FoundBooking[]);
+  }
+
+  return (
+    <div className="bg-resort-white p-6 sm:p-8">
+      <h2 className="text-2xl text-primary">Check a booking</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Use the reference from your confirmation and the mobile number you booked with.
+      </p>
+      <form
+        onSubmit={submit}
+        noValidate
+        className="mt-6 grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+      >
+        <div className="grid gap-2">
+          <Label htmlFor="lookup-ref">Reference</Label>
+          <Input
+            id="lookup-ref"
+            className="h-12 rounded-none uppercase placeholder:normal-case"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            placeholder="e.g. 205A9F81E5"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="lookup-phone">Mobile number</Label>
+          <Input
+            id="lookup-phone"
+            type="tel"
+            inputMode="tel"
+            className="h-12 rounded-none"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </div>
+        <Button
+          type="submit"
+          disabled={loading}
+          className="h-12 rounded-none bg-resort-gold px-7 text-[13px] font-medium text-resort-wood hover:bg-primary hover:text-primary-foreground"
+        >
+          {loading ? <LoaderCircle size={15} className="animate-spin" /> : "Check status"}
+        </Button>
+      </form>
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      {result && (
+        <div className="mt-6 grid gap-3" aria-live="polite">
+          {result.map((b) => (
+            <article key={b.reference} className="border border-border p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-xl text-primary">{b.type_name}</h3>
+                <span
+                  className={`px-2.5 py-1 text-xs ${b.status === "confirmed" ? "bg-resort-ocean-soft text-resort-ocean" : b.status === "cancelled" ? "bg-muted text-muted-foreground" : "bg-resort-sand text-primary"}`}
+                >
+                  {statusText[b.status]}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {prettyDate(b.check_in, "d MMM yyyy")} – {prettyDate(b.check_out, "d MMM yyyy")} ·{" "}
+                {b.guest_count} guests · Ref {b.reference}
+              </p>
+              {b.extras && <p className="mt-1 text-sm text-foreground">Extras: {b.extras}</p>}
+              <p className="mt-2 font-display text-lg tabular-nums text-primary">
+                {formatMoney(b.room_total_cents + b.extras_total_cents)}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

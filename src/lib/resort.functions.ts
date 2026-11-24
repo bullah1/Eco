@@ -86,23 +86,28 @@ export const getAdminOverview = createServerFn({ method: "GET" })
       _role: "admin",
     });
     if (roleError || !isAdmin) throw new Error("Administrator access is required.");
-    const [rooms, units, reservations, guests, gallery, content, addons] = await Promise.all([
-      context.supabase.from("room_types").select("*").order("sort_order"),
-      context.supabase.from("room_units").select("id, name, is_active, room_type_id"),
-      context.supabase
-        .from("reservations")
-        .select(
-          "id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, room_units(name, room_types(name, slug)), profiles(display_name, email, phone), reservation_addons(quantity, total_cents, resort_addons(name))",
-        )
-        .order("created_at", { ascending: false }),
-      context.supabase
-        .from("profiles")
-        .select("id, display_name, email, phone, created_at")
-        .order("created_at", { ascending: false }),
-      context.supabase.from("resort_gallery").select("*").order("sort_order"),
-      context.supabase.from("resort_content").select("*").order("content_key"),
-      context.supabase.from("resort_addons").select("*").order("sort_order"),
-    ]);
+    const [rooms, units, reservations, guests, gallery, content, addons, reviews] =
+      await Promise.all([
+        context.supabase.from("room_types").select("*").order("sort_order"),
+        context.supabase.from("room_units").select("id, name, is_active, room_type_id"),
+        context.supabase
+          .from("reservations")
+          .select(
+            "id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, guest_name, guest_phone, guest_email, booking_group, room_units(name, room_types(name, slug)), profiles(display_name, email, phone), reservation_addons(quantity, total_cents, resort_addons(name))",
+          )
+          .order("created_at", { ascending: false }),
+        context.supabase
+          .from("profiles")
+          .select("id, display_name, email, phone, created_at")
+          .order("created_at", { ascending: false }),
+        context.supabase.from("resort_gallery").select("*").order("sort_order"),
+        context.supabase.from("resort_content").select("*").order("content_key"),
+        context.supabase.from("resort_addons").select("*").order("sort_order"),
+        context.supabase
+          .from("guest_reviews")
+          .select("*")
+          .order("created_at", { ascending: false }),
+      ]);
     if (
       [
         rooms.error,
@@ -112,6 +117,7 @@ export const getAdminOverview = createServerFn({ method: "GET" })
         gallery.error,
         content.error,
         addons.error,
+        reviews.error,
       ].some(Boolean)
     )
       throw new Error("We couldn't load resort management details.");
@@ -123,6 +129,7 @@ export const getAdminOverview = createServerFn({ method: "GET" })
       gallery: gallery.data ?? [],
       content: content.data ?? [],
       addons: addons.data ?? [],
+      reviews: reviews.data ?? [],
     };
   });
 
@@ -138,15 +145,13 @@ export const createRoomType = createServerFn({ method: "POST" })
       _role: "admin",
     });
     if (!isAdmin) throw new Error("Administrator access is required.");
-    const { error } = await context.supabase
-      .from("room_types")
-      .insert({
-        name: data.name.trim(),
-        slug: data.slug.trim().toLowerCase(),
-        description: data.description.trim(),
-        nightly_rate_cents: Math.round(data.rate * 100),
-        max_guests: data.capacity,
-      });
+    const { error } = await context.supabase.from("room_types").insert({
+      name: data.name.trim(),
+      slug: data.slug.trim().toLowerCase(),
+      description: data.description.trim(),
+      nightly_rate_cents: Math.round(data.rate * 100),
+      max_guests: data.capacity,
+    });
     if (error)
       throw new Error(
         error.code === "23505"
@@ -445,5 +450,29 @@ export const updateRoomDetails = createServerFn({ method: "POST" })
       })
       .eq("id", data.roomId);
     if (error) throw new Error("We couldn't save those room details.");
+    return { success: true };
+  });
+
+export const moderateReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { reviewId: string; action: "publish" | "hide" | "delete" }) => {
+    if (!["publish", "hide", "delete"].includes(input?.action)) throw new Error("Unknown action.");
+    return { reviewId: String(input.reviewId), action: input.action };
+  })
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Administrator access is required.");
+    const query =
+      data.action === "delete"
+        ? context.supabase.from("guest_reviews").delete().eq("id", data.reviewId)
+        : context.supabase
+            .from("guest_reviews")
+            .update({ is_published: data.action === "publish" })
+            .eq("id", data.reviewId);
+    const { error } = await query;
+    if (error) throw new Error("We couldn't update that review.");
     return { success: true };
   });

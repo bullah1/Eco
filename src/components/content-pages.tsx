@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, ChevronRight as Crumb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Reveal } from "@/components/reveal";
+import { ReviewsSection } from "@/components/reviews";
 import {
   ActivitiesSection,
   ContactFaqSection,
@@ -75,6 +76,7 @@ export function StaysPage() {
       />
       <RoomCategories />
       <FacilitiesSection />
+      <ReviewsSection />
       <FinalCta />
     </>
   );

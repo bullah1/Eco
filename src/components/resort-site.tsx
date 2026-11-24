@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { resortContact } from "@/lib/resort-content";
+import { ContactFloat } from "@/components/trust";
 
 type NavItem = {
   label: string;
@@ -333,6 +334,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
       <main>{children}</main>
       <ResortFooter />
       <MobileBookBar />
+      <ContactFloat />
     </>
   );
 }

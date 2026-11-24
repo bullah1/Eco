@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      guest_reviews: {
+        Row: {
+          comment: string
+          created_at: string
+          guest_name: string
+          id: string
+          is_published: boolean
+          location: string
+          rating: number
+          stay_label: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          guest_name: string
+          id?: string
+          is_published?: boolean
+          location?: string
+          rating: number
+          stay_label?: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          guest_name?: string
+          id?: string
+          is_published?: boolean
+          location?: string
+          rating?: number
+          stay_label?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -88,21 +121,29 @@ export type Database = {
       }
       reservations: {
         Row: {
+          booking_group: string | null
           booking_reference: string
           check_in: string
           check_out: string
           created_at: string
           guest_count: number
+          guest_email: string
+          guest_name: string
           guest_note: string
+          guest_phone: string
           id: string
           nightly_rate_cents: number
           room_unit_id: string
           status: Database["public"]["Enums"]["reservation_status"]
           total_cents: number
-          user_id: string
+          user_id: string | null
         }
         Insert: {
+          booking_group?: string | null
           booking_reference?: string
+          guest_email?: string
+          guest_name?: string
+          guest_phone?: string
           check_in: string
           check_out: string
           created_at?: string
@@ -113,10 +154,14 @@ export type Database = {
           room_unit_id: string
           status?: Database["public"]["Enums"]["reservation_status"]
           total_cents?: number
-          user_id: string
+          user_id?: string | null
         }
         Update: {
+          booking_group?: string | null
           booking_reference?: string
+          guest_email?: string
+          guest_name?: string
+          guest_phone?: string
           check_in?: string
           check_out?: string
           created_at?: string
@@ -127,7 +172,7 @@ export type Database = {
           room_unit_id?: string
           status?: Database["public"]["Enums"]["reservation_status"]
           total_cents?: number
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -357,6 +402,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_booking: {
+        Args: {
+          p_addons: Json
+          p_check_in: string
+          p_check_out: string
+          p_email: string
+          p_guests: number
+          p_name: string
+          p_note: string
+          p_phone: string
+          p_rooms: Json
+        }
+        Returns: {
+          reference: string
+          type_name: string
+          unit_name: string
+        }[]
+      }
+      find_booking: {
+        Args: { p_phone: string; p_reference: string }
+        Returns: {
+          check_in: string
+          check_out: string
+          extras: string
+          extras_total_cents: number
+          guest_count: number
+          reference: string
+          room_total_cents: number
+          status: Database["public"]["Enums"]["reservation_status"]
+          type_name: string
+        }[]
+      }
       get_available_rooms: {
         Args: { p_check_in: string; p_check_out: string }
         Returns: {

@@ -15,3 +15,5 @@
    `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_ID`.
    The publishable key is safe to expose. Never put the database password or the service role key in the repo.
 6. Open /admin and add room types and rooms.
+7. For booking without an account and guest reviews, also run `guest-booking-and-reviews.sql`
+   (already applied on the current project).

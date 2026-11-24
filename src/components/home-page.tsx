@@ -4,6 +4,8 @@ import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/reveal";
+import { ReviewsSection } from "@/components/reviews";
+import { TrustStrip } from "@/components/trust";
 import { heroSlides, welcome } from "@/lib/resort-content";
 import {
   ActivitiesSection,
@@ -206,7 +208,7 @@ function BookingBar() {
           </label>
           <Button
             type="submit"
-            className="h-11 rounded-none bg-primary px-7 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-resort-gold hover:text-resort-wood sm:col-span-2 lg:col-span-1"
+            className="h-11 rounded-none bg-resort-gold px-7 text-[13px] font-medium text-resort-wood transition-colors hover:bg-primary hover:text-primary-foreground sm:col-span-2 lg:col-span-1"
           >
             Check availability
           </Button>
@@ -216,6 +218,7 @@ function BookingBar() {
             </p>
           )}
         </form>
+        <TrustStrip />
       </div>
     </section>
   );
@@ -266,6 +269,7 @@ export function HomePage() {
       <DiningSection />
       <ActivitiesSection />
       <IndoorGamesSection />
+      <ReviewsSection />
       <PackagesSection />
       <GallerySection />
       <TravelGuideSection />

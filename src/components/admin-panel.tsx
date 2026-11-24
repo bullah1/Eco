@@ -12,6 +12,7 @@ import {
   LoaderCircle,
   Plus,
   ShieldCheck,
+  Star,
   Users,
   UtensilsCrossed,
 } from "lucide-react";
@@ -40,6 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatMoney } from "@/lib/room-booking";
 import { categoryLabel, unitLabel, type AddonCategory, type AddonUnit } from "@/lib/addons";
 import {
+  moderateReview,
   saveAddon,
   updateRoomDetails,
   getAdminOverview,
@@ -55,7 +57,7 @@ import {
 import { useCurrentUser } from "@/lib/auth-context";
 import { Eyebrow } from "@/components/resort-site";
 
-type AdminPanelKey = "rooms" | "bookings" | "guests" | "gallery" | "content" | "addons";
+type AdminPanelKey = "rooms" | "bookings" | "guests" | "gallery" | "content" | "addons" | "reviews";
 
 export function AdminPage() {
   const user = useCurrentUser();
@@ -164,6 +166,14 @@ export function AdminPage() {
                 </TabsTrigger>
                 <TabsTrigger
                   className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-resort-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  value="reviews"
+                >
+                  <Star size={15} /> Reviews
+                  {data.reviews.some((r: any) => !r.is_published) &&
+                    ` (${data.reviews.filter((r: any) => !r.is_published).length} new)`}
+                </TabsTrigger>
+                <TabsTrigger
+                  className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-resort-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   value="content"
                 >
                   <ChevronRight size={15} /> Content
@@ -177,6 +187,9 @@ export function AdminPage() {
               </TabsContent>
               <TabsContent value="guests" className="mt-0">
                 <GuestsAdmin guests={data.guests} />
+              </TabsContent>
+              <TabsContent value="reviews" className="mt-0">
+                <ReviewsAdmin items={data.reviews} panelKey="reviews" />
               </TabsContent>
               <TabsContent value="addons" className="mt-0">
                 <AddonsAdmin items={data.addons} panelKey="addons" />
@@ -532,7 +545,17 @@ function BookingsAdmin({
                   name: string;
                   room_types: { name: string };
                 } | null;
-                const guest = item.profiles as { display_name: string; email: string } | null;
+                const profile = item.profiles as {
+                  display_name: string;
+                  email: string;
+                  phone?: string;
+                } | null;
+                const guest = {
+                  display_name: profile?.display_name || item.guest_name,
+                  email: [item.guest_phone || profile?.phone, item.guest_email || profile?.email]
+                    .filter(Boolean)
+                    .join(" · "),
+                };
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="min-w-40">
@@ -1201,5 +1224,85 @@ function RoomDetailsEditor({ room }: { room: any }) {
         </div>
       </form>
     </details>
+  );
+}
+
+function ReviewsAdmin({ items, panelKey }: { items: any[]; panelKey: AdminPanelKey }) {
+  const { mutation, notice } = useAdminMutation(
+    panelKey,
+    (data: { reviewId: string; action: "publish" | "hide" | "delete" }) => moderateReview({ data }),
+  );
+  return (
+    <section className="border-y border-border bg-background p-5 sm:p-7">
+      <Eyebrow>Shown on the website only after you publish</Eyebrow>
+      <h2 className="mt-3 font-display text-3xl text-primary">Guest reviews</h2>
+      {items.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">
+          No reviews yet. Guests can write one from the home page.
+        </p>
+      ) : (
+        <div className="mt-6 grid gap-4">
+          {items.map((r) => (
+            <article
+              key={r.id}
+              className={`border p-5 ${r.is_published ? "border-border" : "border-resort-gold bg-resort-cream/60"}`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="font-medium text-primary">
+                  {r.guest_name}
+                  {r.location && (
+                    <span className="font-normal text-muted-foreground"> · {r.location}</span>
+                  )}
+                </p>
+                <p className="text-sm text-resort-gold-deep" aria-label={`${r.rating} out of 5`}>
+                  {"★".repeat(r.rating)}
+                  <span className="text-border">{"★".repeat(5 - r.rating)}</span>
+                </p>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-foreground">{r.comment}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {new Date(r.created_at).toLocaleDateString()} ·{" "}
+                {r.is_published ? "Published" : "Waiting for review"}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {r.is_published ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => mutation.mutate({ reviewId: r.id, action: "hide" })}
+                  >
+                    Hide
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => mutation.mutate({ reviewId: r.id, action: "publish" })}
+                  >
+                    <Check size={14} />
+                    Publish
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={() => {
+                    if (window.confirm("Delete this review?"))
+                      mutation.mutate({ reviewId: r.id, action: "delete" });
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+      {notice && (
+        <p role="status" className="mt-4 text-xs text-muted-foreground">
+          {notice}
+        </p>
+      )}
+    </section>
   );
 }
