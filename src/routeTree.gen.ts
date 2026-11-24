@@ -22,6 +22,7 @@ import { Route as OrderRouteImport } from './routes/order'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as StaysRouteImport } from './routes/stays'
 import { Route as PosIndexRouteImport } from './routes/pos.index'
+import { Route as PosCashRouteImport } from './routes/pos.cash'
 import { Route as PosGuestsRouteImport } from './routes/pos.guests'
 import { Route as PosKitchenRouteImport } from './routes/pos.kitchen'
 import { Route as PosOrdersRouteImport } from './routes/pos.orders'
@@ -95,6 +96,11 @@ const PosIndexRoute = PosIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PosRoute,
 } as any)
+const PosCashRoute = PosCashRouteImport.update({
+  id: '/cash',
+  path: '/cash',
+  getParentRoute: () => PosRoute,
+} as any)
 const PosGuestsRoute = PosGuestsRouteImport.update({
   id: '/guests',
   path: '/guests',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/order': typeof OrderRoute
   '/pos': typeof PosRouteWithChildren
   '/stays': typeof StaysRoute
+  '/pos/cash': typeof PosCashRoute
   '/pos/guests': typeof PosGuestsRoute
   '/pos/kitchen': typeof PosKitchenRoute
   '/pos/orders': typeof PosOrdersRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/my-stays': typeof MyStaysRoute
   '/order': typeof OrderRoute
   '/stays': typeof StaysRoute
+  '/pos/cash': typeof PosCashRoute
   '/pos/guests': typeof PosGuestsRoute
   '/pos/kitchen': typeof PosKitchenRoute
   '/pos/orders': typeof PosOrdersRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/order': typeof OrderRoute
   '/pos': typeof PosRouteWithChildren
   '/stays': typeof StaysRoute
+  '/pos/cash': typeof PosCashRoute
   '/pos/guests': typeof PosGuestsRoute
   '/pos/kitchen': typeof PosKitchenRoute
   '/pos/orders': typeof PosOrdersRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/order'
     | '/pos'
     | '/stays'
+    | '/pos/cash'
     | '/pos/guests'
     | '/pos/kitchen'
     | '/pos/orders'
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/my-stays'
     | '/order'
     | '/stays'
+    | '/pos/cash'
     | '/pos/guests'
     | '/pos/kitchen'
     | '/pos/orders'
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '/order'
     | '/pos'
     | '/stays'
+    | '/pos/cash'
     | '/pos/guests'
     | '/pos/kitchen'
     | '/pos/orders'
@@ -374,6 +386,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosIndexRouteImport
       parentRoute: typeof PosRoute
     }
+    '/pos/cash': {
+      id: '/pos/cash'
+      path: '/cash'
+      fullPath: '/pos/cash'
+      preLoaderRoute: typeof PosCashRouteImport
+      parentRoute: typeof PosRoute
+    }
     '/pos/guests': {
       id: '/pos/guests'
       path: '/guests'
@@ -427,6 +446,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface PosRouteChildren {
+  PosCashRoute: typeof PosCashRoute
   PosGuestsRoute: typeof PosGuestsRoute
   PosKitchenRoute: typeof PosKitchenRoute
   PosOrdersRoute: typeof PosOrdersRoute
@@ -437,6 +457,7 @@ interface PosRouteChildren {
 }
 
 const PosRouteChildren: PosRouteChildren = {
+  PosCashRoute: PosCashRoute,
   PosGuestsRoute: PosGuestsRoute,
   PosKitchenRoute: PosKitchenRoute,
   PosOrdersRoute: PosOrdersRoute,

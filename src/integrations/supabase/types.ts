@@ -83,6 +83,7 @@ export type Database = {
           method: string
           received_by: string | null
           reference: string
+          shift_id: string | null
           void_reason: string | null
           voided_at: string | null
           voided_by: string | null
@@ -95,6 +96,7 @@ export type Database = {
           method: string
           received_by?: string | null
           reference?: string
+          shift_id?: string | null
           void_reason?: string | null
           voided_at?: string | null
           voided_by?: string | null
@@ -107,9 +109,91 @@ export type Database = {
           method?: string
           received_by?: string | null
           reference?: string
+          shift_id?: string | null
           void_reason?: string | null
           voided_at?: string | null
           voided_by?: string | null
+        }
+        Relationships: []
+      }
+      cash_movements: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          reason: string
+          shift_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          reason: string
+          shift_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          reason?: string
+          shift_id?: string
+        }
+        Relationships: []
+      }
+      cash_shifts: {
+        Row: {
+          close_note: string
+          closed_at: string | null
+          closed_by: string | null
+          counted_cash_cents: number | null
+          difference_cents: number | null
+          expected_cash_cents: number | null
+          id: string
+          open_note: string
+          opened_at: string
+          opened_by: string | null
+          opening_cash_cents: number
+          shift_no: string
+          status: string
+          summary: Json | null
+        }
+        Insert: {
+          close_note?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          counted_cash_cents?: number | null
+          difference_cents?: number | null
+          expected_cash_cents?: number | null
+          id?: string
+          open_note?: string
+          opened_at?: string
+          opened_by?: string | null
+          opening_cash_cents: number
+          shift_no?: string
+          status?: string
+          summary?: Json | null
+        }
+        Update: {
+          close_note?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          counted_cash_cents?: number | null
+          difference_cents?: number | null
+          expected_cash_cents?: number | null
+          id?: string
+          open_note?: string
+          opened_at?: string
+          opened_by?: string | null
+          opening_cash_cents?: number
+          shift_no?: string
+          status?: string
+          summary?: Json | null
         }
         Relationships: []
       }
@@ -390,6 +474,7 @@ export type Database = {
           method: string
           received_by: string | null
           reference: string
+          shift_id: string | null
           ticket_id: string
           void_reason: string | null
           voided_at: string | null
@@ -402,6 +487,7 @@ export type Database = {
           method: string
           received_by?: string | null
           reference?: string
+          shift_id?: string | null
           ticket_id: string
           void_reason?: string | null
           voided_at?: string | null
@@ -414,6 +500,7 @@ export type Database = {
           method?: string
           received_by?: string | null
           reference?: string
+          shift_id?: string | null
           ticket_id?: string
           void_reason?: string | null
           voided_at?: string | null
@@ -905,6 +992,10 @@ export type Database = {
       }
     }
     Functions: {
+      pos_cash_movement: { Args: { p_amount_cents: number; p_kind: string; p_reason: string }; Returns: string }
+      pos_close_shift: { Args: { p_counted_cents: number; p_note: string }; Returns: Json }
+      pos_open_shift: { Args: { p_note: string; p_opening_cents: number }; Returns: string }
+      pos_shift_totals: { Args: { p_shift: string }; Returns: Json }
       pos_cancel_ticket: { Args: { p_reason: string; p_ticket: string }; Returns: undefined }
       pos_open_ticket: { Args: { p_label: string; p_table: string | null }; Returns: string }
       pos_save_table: { Args: { p_active: boolean; p_id: string | null; p_name: string }; Returns: string }

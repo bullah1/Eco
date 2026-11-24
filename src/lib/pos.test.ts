@@ -146,3 +146,12 @@ describe("payments", () => {
     expect(changeDue(null, 5000)).toBe(0);
   });
 });
+
+import { differenceLabel } from "./pos-cash";
+describe("cash close", () => {
+  it("names the difference", () => {
+    expect(differenceLabel(0)).toEqual({ text: "Exact", tone: "ok" });
+    expect(differenceLabel(-12000)).toEqual({ text: "৳120 short", tone: "short" });
+    expect(differenceLabel(5000)).toEqual({ text: "৳50 over", tone: "over" });
+  });
+});

@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   ChefHat,
   UtensilsCrossed,
+  Wallet,
   Users,
   Wifi,
   WifiOff,
@@ -20,6 +21,7 @@ import { LogoMark } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useStaffRole, useUnbilledOrders } from "@/lib/pos";
+import { useDrawerOpen } from "@/lib/pos-cash";
 
 type PosSession = { user: User; isAdmin: boolean };
 const PosContext = createContext<PosSession | null>(null);
@@ -142,6 +144,7 @@ function Frame({ children }: { children: ReactNode }) {
   const online = useOnline();
   const orders = useUnbilledOrders();
   const waiting = orders.data?.length ?? 0;
+  const drawer = useDrawerOpen();
 
   const nav = [
     {
@@ -168,6 +171,7 @@ function Frame({ children }: { children: ReactNode }) {
       Icon: ChefHat,
       active: pathname.startsWith("/pos/kitchen"),
     },
+    { to: "/pos/cash", label: "Cash", Icon: Wallet, active: pathname.startsWith("/pos/cash") },
     {
       to: "/pos/orders",
       label: "Orders",
@@ -231,6 +235,14 @@ function Frame({ children }: { children: ReactNode }) {
             {online ? <Wifi size={14} /> : <WifiOff size={14} className="text-amber-300" />}
             {online ? "Online" : "Offline: changes won't save"}
           </span>
+          {drawer.data !== undefined && (
+            <Link
+              to="/pos/cash"
+              className={`flex items-center gap-2 ${drawer.data ? "text-pos-sand/75" : "font-medium text-amber-300"}`}
+            >
+              <Wallet size={14} /> {drawer.data ? "Cash drawer open" : "Cash drawer closed"}
+            </Link>
+          )}
           <span className="truncate text-[13px] text-white" title={user.email}>
             {user.email}
           </span>
