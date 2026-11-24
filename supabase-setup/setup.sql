@@ -316,3 +316,28 @@ INSERT INTO public.resort_addons (category, name, description, price_cents, unit
   ('service', 'Laundry', 'Wash and fold for your stay', 20000, 'per_stay', 60),
   ('activity', 'Speedboat trip to Chhera Dwip', 'Return speedboat for your group', 350000, 'per_stay', 70),
   ('activity', 'Bonfire setup', 'Fire, seating and lights on the beach for one evening', 150000, 'per_stay', 80);
+
+-- ===== Room category details, media links and per-category availability =====
+ALTER TABLE public.room_types
+  ADD COLUMN bed_type text NOT NULL DEFAULT '',
+  ADD COLUMN room_size_sqft integer CHECK (room_size_sqft IS NULL OR room_size_sqft > 0),
+  ADD COLUMN view_label text NOT NULL DEFAULT '',
+  ADD COLUMN video_url text NOT NULL DEFAULT '',
+  ADD COLUMN panorama_url text NOT NULL DEFAULT '',
+  ADD COLUMN gallery_urls text[] NOT NULL DEFAULT '{}';
+
+CREATE OR REPLACE FUNCTION public.get_room_type_availability(p_check_in date, p_check_out date)
+RETURNS TABLE (room_type_id uuid, available_count integer)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT ru.room_type_id, count(*)::integer
+  FROM public.room_units ru
+  JOIN public.room_types rt ON rt.id = ru.room_type_id
+  WHERE p_check_out > p_check_in AND ru.is_active AND rt.is_active
+    AND NOT EXISTS (
+      SELECT 1 FROM public.reservations r
+      WHERE r.room_unit_id = ru.id AND r.status IN ('pending', 'confirmed')
+        AND daterange(r.check_in, r.check_out, '[)') && daterange(p_check_in, p_check_out, '[)')
+    )
+  GROUP BY ru.room_type_id
+$$;
+GRANT EXECUTE ON FUNCTION public.get_room_type_availability(date, date) TO anon, authenticated;

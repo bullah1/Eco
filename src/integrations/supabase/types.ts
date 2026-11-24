@@ -241,20 +241,32 @@ export type Database = {
       }
       room_types: {
         Row: {
+          bed_type: string
           created_at: string
           description: string
           features: string[]
+          gallery_urls: string[]
           id: string
           image_url: string
           is_active: boolean
           max_guests: number
           name: string
           nightly_rate_cents: number
+          panorama_url: string
+          room_size_sqft: number | null
           slug: string
           sort_order: number
+          video_url: string
+          view_label: string
         }
         Insert: {
+          bed_type?: string
           created_at?: string
+          gallery_urls?: string[]
+          panorama_url?: string
+          room_size_sqft?: number | null
+          video_url?: string
+          view_label?: string
           description?: string
           features?: string[]
           id?: string
@@ -267,7 +279,13 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          bed_type?: string
           created_at?: string
+          gallery_urls?: string[]
+          panorama_url?: string
+          room_size_sqft?: number | null
+          video_url?: string
+          view_label?: string
           description?: string
           features?: string[]
           id?: string
@@ -352,6 +370,13 @@ export type Database = {
           room_unit_id: string
           type_name: string
           type_slug: string
+        }[]
+      }
+      get_room_type_availability: {
+        Args: { p_check_in: string; p_check_out: string }
+        Returns: {
+          available_count: number
+          room_type_id: string
         }[]
       }
       has_role: {

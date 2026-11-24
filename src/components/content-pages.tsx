@@ -11,10 +11,10 @@ import {
   DiningSection,
   FacilitiesSection,
   FinalCta,
-  HomeRooms,
   IndoorGamesSection,
   TravelGuideSection,
 } from "@/components/home-sections";
+import { RoomCategories } from "@/components/room-categories";
 import { allGalleryPhotos, galleryCategories, heroSlides } from "@/lib/resort-content";
 
 function PageHero({
@@ -69,11 +69,11 @@ export function StaysPage() {
       <PageHero
         crumb="Rooms"
         title="Rooms and suites"
-        copy="Choose a room close to the sea. Every room can be booked online, and you can add meals and activities as you book."
+        copy="Every room category with its price, beds, size and view. Open a room for photos, the 360° view and video, or book it straight away."
         image={heroSlides[1]!.image}
         alt={heroSlides[1]!.alt}
       />
-      <HomeRooms layout="grid" />
+      <RoomCategories />
       <FacilitiesSection />
       <FinalCta />
     </>

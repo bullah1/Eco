@@ -22,8 +22,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/lib/auth-context";
 import { getMyReservations, getGuestProfile } from "@/lib/resort.functions";
-import { RoomCard, type AvailableRoom } from "@/components/room-card";
-import { allocateGuests, formatMoney, selectionProblem } from "@/lib/room-booking";
+import { type AvailableRoom } from "@/components/room-card";
+import { RoomSpecs } from "@/components/room-categories";
+import {
+  allocateGuests,
+  formatMoney,
+  groupUnits,
+  pickUnits,
+  selectionProblem,
+} from "@/lib/room-booking";
+import { roomMedia, useRoomTypes } from "@/lib/rooms";
 import {
   addonLines,
   categoryLabel,
@@ -45,7 +53,7 @@ const ghostBtn = "h-12 rounded-none px-4 text-[13px] text-foreground";
 type Draft = {
   checkIn: string;
   checkOut: string;
-  rooms: AvailableRoom[];
+  qty: Record<string, number>;
   chosen: Record<string, number>;
 };
 
@@ -78,7 +86,8 @@ export function BookingFlow() {
   const [checkIn, setCheckIn] = useState(search.checkIn ?? "");
   const [checkOut, setCheckOut] = useState(search.checkOut ?? "");
   const [guestCount, setGuestCount] = useState(Math.min(6, Math.max(1, search.guests ?? 2)));
-  const [selectedRooms, setSelectedRooms] = useState<AvailableRoom[]>([]);
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const [presetApplied, setPresetApplied] = useState(!search.room);
   const [chosen, setChosen] = useState<Record<string, number>>({});
   const [note, setNote] = useState("");
   const [bookedRooms, setBookedRooms] = useState<{ title: string; reference: string }[]>([]);
@@ -88,8 +97,9 @@ export function BookingFlow() {
   // Bring back rooms and extras chosen before a guest left to sign in.
   useEffect(() => {
     const draft = readDraft(search.checkIn, search.checkOut);
-    if (draft && draft.rooms.length > 0) {
-      setSelectedRooms(draft.rooms);
+    if (draft && Object.values(draft.qty ?? {}).some((n) => n > 0)) {
+      setQty(draft.qty);
+      setPresetApplied(true);
       setChosen(draft.chosen);
       setStep(4);
     }
@@ -98,16 +108,16 @@ export function BookingFlow() {
 
   useEffect(() => {
     try {
-      if (selectedRooms.length > 0 && step < 6) {
+      if (Object.values(qty).some((n) => n > 0) && step < 6) {
         window.sessionStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ checkIn, checkOut, rooms: selectedRooms, chosen } satisfies Draft),
+          JSON.stringify({ checkIn, checkOut, qty, chosen } satisfies Draft),
         );
       }
     } catch {
       /* storage unavailable: the draft simply isn't kept */
     }
-  }, [checkIn, checkOut, selectedRooms, chosen, step]);
+  }, [checkIn, checkOut, qty, chosen, step]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -154,23 +164,24 @@ export function BookingFlow() {
     },
   });
 
-  useEffect(() => {
-    if (!roomQuery.data) return;
-    const available = new Set(roomQuery.data.map((room) => room.room_unit_id));
-    setSelectedRooms((current) =>
-      current.some((room) => !available.has(room.room_unit_id))
-        ? current.filter((room) => available.has(room.room_unit_id))
-        : current,
-    );
-  }, [roomQuery.data]);
+  const typesQuery = useRoomTypes();
+  const types = typesQuery.data ?? [];
+  const freeByType = useMemo(() => groupUnits(roomQuery.data ?? []), [roomQuery.data]);
+  const selectedRooms = useMemo(() => pickUnits(roomQuery.data ?? [], qty), [roomQuery.data, qty]);
+  const presetType = types.find((t) => t.slug === search.room);
 
-  const toggleRoom = (room: AvailableRoom) => {
+  // A room chosen on the Rooms page or a room page arrives pre-selected.
+  useEffect(() => {
+    if (presetApplied || !presetType || !roomQuery.data) return;
+    const free = freeByType.get(presetType.id)?.length ?? 0;
+    if (free > 0) setQty({ [presetType.id]: Math.min(free, search.rooms ?? 1) });
+    setPresetApplied(true);
+  }, [presetApplied, presetType, roomQuery.data, freeByType, search.rooms]);
+
+  const setRoomQty = (typeId: string, count: number) => {
     setMessage("");
-    setSelectedRooms((current) =>
-      current.some((item) => item.room_unit_id === room.room_unit_id)
-        ? current.filter((item) => item.room_unit_id !== room.room_unit_id)
-        : [...current, room],
-    );
+    const free = freeByType.get(typeId)?.length ?? 0;
+    setQty((current) => ({ ...current, [typeId]: Math.max(0, Math.min(free, count)) }));
   };
   const setAddon = (id: string, count: number) =>
     setChosen((c) => ({ ...c, [id]: Math.max(0, Math.min(20, count)) }));
@@ -188,6 +199,12 @@ export function BookingFlow() {
   const extrasTotal = lines.reduce((sum, l) => sum + l.total, 0);
   const grandTotal = roomsTotal + extrasTotal;
   const roomWord = (count: number) => `${count} ${count === 1 ? "room" : "rooms"}`;
+  const roomLines = types
+    .map((type) => {
+      const count = selectedRooms.filter((r) => r.room_type_id === type.id).length;
+      return { type, count, total: type.nightly_rate_cents * nights * count };
+    })
+    .filter((line) => line.count > 0);
   const nightWord = `${nights} ${nights === 1 ? "night" : "nights"}`;
   const guestWord = `${guestCount} ${guestCount === 1 ? "guest" : "guests"}`;
 
@@ -219,15 +236,13 @@ export function BookingFlow() {
       let warning = "";
       const first = data[0];
       if (first && lines.length > 0) {
-        const { error: extrasError } = await supabase
-          .from("reservation_addons")
-          .insert(
-            lines.map((l) => ({
-              reservation_id: first.id,
-              addon_id: l.addon.id,
-              quantity: l.quantity,
-            })),
-          );
+        const { error: extrasError } = await supabase.from("reservation_addons").insert(
+          lines.map((l) => ({
+            reservation_id: first.id,
+            addon_id: l.addon.id,
+            quantity: l.quantity,
+          })),
+        );
         if (extrasError)
           warning =
             "Your rooms are requested, but the meals and extras couldn't be saved. Please mention them to the resort.";
@@ -302,6 +317,13 @@ export function BookingFlow() {
         <section className="min-w-0 bg-resort-white p-6 sm:p-9">
           {step === 1 && (
             <>
+              {presetType && (
+                <p className="mb-6 border-l-2 border-resort-gold bg-resort-cream px-4 py-3 text-sm text-foreground">
+                  You're booking <span className="font-medium text-primary">{presetType.name}</span>
+                  {search.rooms && search.rooms > 1 ? ` × ${search.rooms} rooms` : ""}. Choose your
+                  dates to see the bill.
+                </p>
+              )}
               <StepTitle
                 step={1}
                 title="When are you coming?"
@@ -422,17 +444,127 @@ export function BookingFlow() {
                   </Button>
                 </div>
               )}
-              <div className="mt-6 grid gap-5">
-                {roomQuery.data?.map((room) => (
-                  <RoomCard
-                    key={room.room_unit_id}
-                    room={room}
-                    nights={nights}
-                    selected={selectedRooms.some((item) => item.room_unit_id === room.room_unit_id)}
-                    onSelect={() => toggleRoom(room)}
-                  />
-                ))}
-              </div>
+              <ul className="mt-6 grid gap-5">
+                {types
+                  .filter((type) => (freeByType.get(type.id)?.length ?? 0) > 0)
+                  .map((type, i) => {
+                    const free = freeByType.get(type.id)?.length ?? 0;
+                    const count = Math.min(qty[type.id] ?? 0, free);
+                    const on = count > 0;
+                    return (
+                      <li
+                        key={type.id}
+                        className={`grid border transition-colors sm:grid-cols-[200px_1fr] ${on ? "border-primary bg-resort-ocean-soft/30" : "border-border"}`}
+                      >
+                        <div className="sagara-image-frame aspect-[4/3] sm:aspect-auto sm:h-full">
+                          <img
+                            src={roomMedia(type, i).photos[0]}
+                            alt={type.name}
+                            loading="lazy"
+                            className="size-full object-cover"
+                          />
+                        </div>
+                        <div className="p-5">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-xl text-primary">{type.name}</h3>
+                              <Link
+                                to="/rooms/$slug"
+                                params={{ slug: type.slug }}
+                                target="_blank"
+                                className="text-xs text-resort-ocean underline-offset-4 hover:underline"
+                              >
+                                Photos, 360° and details
+                              </Link>
+                            </div>
+                            <p className="text-right">
+                              <span className="block font-display text-xl tabular-nums text-primary">
+                                {formatMoney(type.nightly_rate_cents)}
+                              </span>
+                              <span className="text-xs text-muted-foreground">per night</span>
+                            </p>
+                          </div>
+                          <div className="mt-4 text-[13px]">
+                            <RoomSpecs room={type} />
+                          </div>
+                          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                            <span
+                              className={`text-xs ${free <= 2 ? "text-resort-gold-deep" : "text-muted-foreground"}`}
+                            >
+                              {free} {free === 1 ? "room" : "rooms"} free
+                            </span>
+                            <div className="flex items-center gap-3">
+                              {on && (
+                                <span className="text-sm tabular-nums text-primary">
+                                  {formatMoney(type.nightly_rate_cents * nights * count)}
+                                </span>
+                              )}
+                              <div className="flex h-10 items-center border border-input bg-resort-white">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-10 rounded-none"
+                                  aria-label={`Fewer ${type.name} rooms`}
+                                  disabled={!on}
+                                  onClick={() => setRoomQty(type.id, count - 1)}
+                                >
+                                  <Minus size={14} />
+                                </Button>
+                                <span className="w-10 text-center tabular-nums" aria-live="polite">
+                                  {count}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-10 rounded-none"
+                                  aria-label={`More ${type.name} rooms`}
+                                  disabled={count >= free}
+                                  onClick={() => setRoomQty(type.id, count + 1)}
+                                >
+                                  <Plus size={14} />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+              </ul>
+              {typesQuery.isLoading && (
+                <p role="status" className="mt-6 text-sm text-muted-foreground">
+                  Loading room details
+                </p>
+              )}
+              {roomLines.length > 0 && (
+                <div className="mt-8 bg-resort-cream p-5 sm:p-6">
+                  <p className="text-[13px] font-medium text-resort-ocean">Your bill</p>
+                  <ul className="mt-3 divide-y divide-border">
+                    {roomLines.map((line) => (
+                      <li key={line.type.id} className="flex justify-between gap-3 py-3 text-sm">
+                        <span>
+                          <span className="block text-primary">{line.type.name}</span>
+                          <span className="text-xs tabular-nums text-muted-foreground">
+                            {formatMoney(line.type.nightly_rate_cents)} × {nightWord} ×{" "}
+                            {roomWord(line.count)}
+                          </span>
+                        </span>
+                        <span className="tabular-nums text-primary">{formatMoney(line.total)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 flex items-baseline justify-between border-t border-border pt-4">
+                    <span className="text-sm text-muted-foreground">
+                      Rooms total · {roomWord(selectedRooms.length)}
+                    </span>
+                    <span className="font-display text-2xl tabular-nums text-primary">
+                      {formatMoney(roomsTotal)}
+                    </span>
+                  </p>
+                </div>
+              )}
               {problem && selectedRooms.length > 0 && (
                 <p role="alert" className="mt-4 text-sm text-destructive">
                   {problem}
@@ -796,12 +928,12 @@ export function BookingFlow() {
               <div className="mt-6 border-t border-border pt-5">
                 <p className="text-sm font-medium text-primary">{roomWord(selectedRooms.length)}</p>
                 <ul className="mt-3 grid gap-2 text-sm">
-                  {selectedRooms.map((room) => (
-                    <li key={room.room_unit_id} className="flex justify-between gap-3">
-                      <span className="text-muted-foreground">{room.type_name}</span>
-                      <span className="tabular-nums text-primary">
-                        {formatMoney(room.nightly_rate_cents * nights)}
+                  {roomLines.map((line) => (
+                    <li key={line.type.id} className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        {line.type.name} × {line.count}
                       </span>
+                      <span className="tabular-nums text-primary">{formatMoney(line.total)}</span>
                     </li>
                   ))}
                 </ul>

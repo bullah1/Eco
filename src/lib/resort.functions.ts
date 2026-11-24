@@ -27,7 +27,11 @@ export const updateGuestProfile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("profiles")
-      .update({ display_name: data.displayName, phone: data.phone, updated_at: new Date().toISOString() })
+      .update({
+        display_name: data.displayName,
+        phone: data.phone,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", context.userId);
     if (error) throw new Error("We couldn't save your guest details.");
     return { success: true };
@@ -38,7 +42,9 @@ export const getMyReservations = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("reservations")
-      .select("id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, room_units(name, room_types(name, slug)), reservation_addons(quantity, total_cents, resort_addons(name))")
+      .select(
+        "id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, room_units(name, room_types(name, slug)), reservation_addons(quantity, total_cents, resort_addons(name))",
+      )
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error("We couldn't load your stays.");
@@ -49,40 +55,104 @@ export const getGuestDashboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const [profile, role, reservations] = await Promise.all([
-      context.supabase.from("profiles").select("id, email, display_name, phone, created_at").eq("id", context.userId).maybeSingle(),
+      context.supabase
+        .from("profiles")
+        .select("id, email, display_name, phone, created_at")
+        .eq("id", context.userId)
+        .maybeSingle(),
       context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
-      context.supabase.from("reservations").select("id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, room_units(name, room_types(name, slug))").eq("user_id", context.userId).order("created_at", { ascending: false }),
+      context.supabase
+        .from("reservations")
+        .select(
+          "id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, room_units(name, room_types(name, slug))",
+        )
+        .eq("user_id", context.userId)
+        .order("created_at", { ascending: false }),
     ]);
-    if (profile.error || role.error || reservations.error) throw new Error("We couldn't load your account details.");
-    return { profile: profile.data, isAdmin: role.data === true, reservations: reservations.data ?? [] };
+    if (profile.error || role.error || reservations.error)
+      throw new Error("We couldn't load your account details.");
+    return {
+      profile: profile.data,
+      isAdmin: role.data === true,
+      reservations: reservations.data ?? [],
+    };
   });
 
 export const getAdminOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (roleError || !isAdmin) throw new Error("Administrator access is required.");
     const [rooms, units, reservations, guests, gallery, content, addons] = await Promise.all([
       context.supabase.from("room_types").select("*").order("sort_order"),
       context.supabase.from("room_units").select("id, name, is_active, room_type_id"),
-      context.supabase.from("reservations").select("id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, room_units(name, room_types(name, slug)), profiles(display_name, email, phone), reservation_addons(quantity, total_cents, resort_addons(name))").order("created_at", { ascending: false }),
-      context.supabase.from("profiles").select("id, display_name, email, phone, created_at").order("created_at", { ascending: false }),
+      context.supabase
+        .from("reservations")
+        .select(
+          "id, booking_reference, check_in, check_out, guest_count, status, nightly_rate_cents, total_cents, guest_note, room_units(name, room_types(name, slug)), profiles(display_name, email, phone), reservation_addons(quantity, total_cents, resort_addons(name))",
+        )
+        .order("created_at", { ascending: false }),
+      context.supabase
+        .from("profiles")
+        .select("id, display_name, email, phone, created_at")
+        .order("created_at", { ascending: false }),
       context.supabase.from("resort_gallery").select("*").order("sort_order"),
       context.supabase.from("resort_content").select("*").order("content_key"),
       context.supabase.from("resort_addons").select("*").order("sort_order"),
     ]);
-    if ([rooms.error, units.error, reservations.error, guests.error, gallery.error, content.error, addons.error].some(Boolean)) throw new Error("We couldn't load resort management details.");
-    return { rooms: rooms.data ?? [], units: units.data ?? [], reservations: reservations.data ?? [], guests: guests.data ?? [], gallery: gallery.data ?? [], content: content.data ?? [], addons: addons.data ?? [] };
+    if (
+      [
+        rooms.error,
+        units.error,
+        reservations.error,
+        guests.error,
+        gallery.error,
+        content.error,
+        addons.error,
+      ].some(Boolean)
+    )
+      throw new Error("We couldn't load resort management details.");
+    return {
+      rooms: rooms.data ?? [],
+      units: units.data ?? [],
+      reservations: reservations.data ?? [],
+      guests: guests.data ?? [],
+      gallery: gallery.data ?? [],
+      content: content.data ?? [],
+      addons: addons.data ?? [],
+    };
   });
 
 export const createRoomType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name: string; slug: string; description: string; rate: number; capacity: number }) => input)
+  .inputValidator(
+    (input: { name: string; slug: string; description: string; rate: number; capacity: number }) =>
+      input,
+  )
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (!isAdmin) throw new Error("Administrator access is required.");
-    const { error } = await context.supabase.from("room_types").insert({ name: data.name.trim(), slug: data.slug.trim().toLowerCase(), description: data.description.trim(), nightly_rate_cents: Math.round(data.rate * 100), max_guests: data.capacity });
-    if (error) throw new Error(error.code === "23505" ? "That room address is already in use." : "We couldn't save that room type.");
+    const { error } = await context.supabase
+      .from("room_types")
+      .insert({
+        name: data.name.trim(),
+        slug: data.slug.trim().toLowerCase(),
+        description: data.description.trim(),
+        nightly_rate_cents: Math.round(data.rate * 100),
+        max_guests: data.capacity,
+      });
+    if (error)
+      throw new Error(
+        error.code === "23505"
+          ? "That room address is already in use."
+          : "We couldn't save that room type.",
+      );
     return { success: true };
   });
 
@@ -90,9 +160,15 @@ export const updateRoomRate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { roomId: string; rate: number }) => input)
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (!isAdmin) throw new Error("Administrator access is required.");
-    const { error } = await context.supabase.from("room_types").update({ nightly_rate_cents: Math.round(data.rate * 100) }).eq("id", data.roomId);
+    const { error } = await context.supabase
+      .from("room_types")
+      .update({ nightly_rate_cents: Math.round(data.rate * 100) })
+      .eq("id", data.roomId);
     if (error) throw new Error("We couldn't update that rate.");
     return { success: true };
   });
@@ -101,21 +177,40 @@ export const setRoomTypeActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { roomId: string; isActive: boolean }) => input)
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (!isAdmin) throw new Error("Administrator access is required.");
-    const { error } = await context.supabase.from("room_types").update({ is_active: data.isActive }).eq("id", data.roomId);
+    const { error } = await context.supabase
+      .from("room_types")
+      .update({ is_active: data.isActive })
+      .eq("id", data.roomId);
     if (error) throw new Error("We couldn't update that room type.");
     return { success: true };
   });
 
 export const updateReservationStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { reservationId: string; status: "pending" | "confirmed" | "cancelled" }) => input)
+  .inputValidator(
+    (input: { reservationId: string; status: "pending" | "confirmed" | "cancelled" }) => input,
+  )
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (!isAdmin) throw new Error("Administrator access is required.");
-    const { error } = await context.supabase.from("reservations").update({ status: data.status }).eq("id", data.reservationId);
-    if (error) throw new Error(error.code === "23P01" ? "Those dates now overlap another stay." : "We couldn't update that reservation.");
+    const { error } = await context.supabase
+      .from("reservations")
+      .update({ status: data.status })
+      .eq("id", data.reservationId);
+    if (error)
+      throw new Error(
+        error.code === "23P01"
+          ? "Those dates now overlap another stay."
+          : "We couldn't update that reservation.",
+      );
     return { success: true };
   });
 
@@ -123,9 +218,15 @@ export const setRoomUnitActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { unitId: string; isActive: boolean }) => input)
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (!isAdmin) throw new Error("Administrator access is required.");
-    const { error } = await context.supabase.from("room_units").update({ is_active: data.isActive }).eq("id", data.unitId);
+    const { error } = await context.supabase
+      .from("room_units")
+      .update({ is_active: data.isActive })
+      .eq("id", data.unitId);
     if (error) throw new Error("We couldn't update that room.");
     return { success: true };
   });
@@ -134,21 +235,51 @@ export const createRoomUnit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { roomTypeId: string; name: string }) => input)
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (!isAdmin) throw new Error("Administrator access is required.");
-    const { error } = await context.supabase.from("room_units").insert({ room_type_id: data.roomTypeId, name: data.name.trim() });
-    if (error) throw new Error(error.code === "23505" ? "That room name is already in use for this stay." : "We couldn't add that room.");
+    const { error } = await context.supabase
+      .from("room_units")
+      .insert({ room_type_id: data.roomTypeId, name: data.name.trim() });
+    if (error)
+      throw new Error(
+        error.code === "23505"
+          ? "That room name is already in use for this stay."
+          : "We couldn't add that room.",
+      );
     return { success: true };
   });
 
 export const saveGalleryItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id?: string; title: string; imageUrl: string; altText: string; category: string; isPublished: boolean }) => input)
+  .inputValidator(
+    (input: {
+      id?: string;
+      title: string;
+      imageUrl: string;
+      altText: string;
+      category: string;
+      isPublished: boolean;
+    }) => input,
+  )
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (!isAdmin) throw new Error("Administrator access is required.");
-    const values = { title: data.title.trim(), image_url: data.imageUrl.trim(), alt_text: data.altText.trim(), category: data.category.trim(), is_published: data.isPublished };
-    const query = data.id ? context.supabase.from("resort_gallery").update(values).eq("id", data.id) : context.supabase.from("resort_gallery").insert(values);
+    const values = {
+      title: data.title.trim(),
+      image_url: data.imageUrl.trim(),
+      alt_text: data.altText.trim(),
+      category: data.category.trim(),
+      is_published: data.isPublished,
+    };
+    const query = data.id
+      ? context.supabase.from("resort_gallery").update(values).eq("id", data.id)
+      : context.supabase.from("resort_gallery").insert(values);
     const { error } = await query;
     if (error) throw new Error("We couldn't save that gallery item.");
     return { success: true };
@@ -156,12 +287,24 @@ export const saveGalleryItem = createServerFn({ method: "POST" })
 
 export const saveResortContent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id?: string; key: string; value: string; isPublished: boolean }) => input)
+  .inputValidator(
+    (input: { id?: string; key: string; value: string; isPublished: boolean }) => input,
+  )
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (!isAdmin) throw new Error("Administrator access is required.");
-    const values = { content_key: data.key.trim(), content_value: { copy: data.value }, is_published: data.isPublished, updated_at: new Date().toISOString() };
-    const query = data.id ? context.supabase.from("resort_content").update(values).eq("id", data.id) : context.supabase.from("resort_content").insert(values);
+    const values = {
+      content_key: data.key.trim(),
+      content_value: { copy: data.value },
+      is_published: data.isPublished,
+      updated_at: new Date().toISOString(),
+    };
+    const query = data.id
+      ? context.supabase.from("resort_content").update(values).eq("id", data.id)
+      : context.supabase.from("resort_content").insert(values);
     const { error } = await query;
     if (error) throw new Error("We couldn't save that resort content.");
     return { success: true };
@@ -181,13 +324,19 @@ export const saveAddon = createServerFn({ method: "POST" })
   .inputValidator((input: AddonInput) => {
     const name = typeof input?.name === "string" ? input.name.trim() : "";
     if (!name || name.length > 80) throw new Error("Give the item a name under 80 characters.");
-    if (!Number.isFinite(input.price) || input.price < 0) throw new Error("Enter a price of 0 or more.");
-    if (!["food", "service", "activity"].includes(input.category)) throw new Error("Choose a category.");
-    if (!["per_person", "per_person_per_night", "per_night", "per_stay"].includes(input.unit)) throw new Error("Choose how it is priced.");
+    if (!Number.isFinite(input.price) || input.price < 0)
+      throw new Error("Enter a price of 0 or more.");
+    if (!["food", "service", "activity"].includes(input.category))
+      throw new Error("Choose a category.");
+    if (!["per_person", "per_person_per_night", "per_night", "per_stay"].includes(input.unit))
+      throw new Error("Choose how it is priced.");
     return { ...input, name, description: (input.description ?? "").trim().slice(0, 200) };
   })
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
     if (!isAdmin) throw new Error("Administrator access is required.");
     const values = {
       category: data.category,
@@ -202,5 +351,99 @@ export const saveAddon = createServerFn({ method: "POST" })
       : context.supabase.from("resort_addons").insert(values);
     const { error } = await query;
     if (error) throw new Error("We couldn't save that item.");
+    return { success: true };
+  });
+
+type RoomDetailsInput = {
+  roomId: string;
+  name: string;
+  description: string;
+  bedType: string;
+  sizeSqft: number | null;
+  viewLabel: string;
+  features: string[];
+  imageUrl: string;
+  galleryUrls: string[];
+  panoramaUrl: string;
+  videoUrl: string;
+  capacity: number;
+};
+
+const cleanUrl = (value: string) => {
+  const v = value.trim();
+  if (!v) return "";
+  try {
+    const url = new URL(v);
+    if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error();
+    return url.toString();
+  } catch {
+    throw new Error(`"${v.slice(0, 60)}" is not a valid web address.`);
+  }
+};
+
+export const updateRoomDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: RoomDetailsInput) => {
+    const name = String(input?.name ?? "").trim();
+    if (!name || name.length > 80) throw new Error("Give the room a name under 80 characters.");
+    const capacity = Math.round(Number(input.capacity));
+    if (!Number.isFinite(capacity) || capacity < 1 || capacity > 20)
+      throw new Error("Guest capacity must be between 1 and 20.");
+    const size =
+      input.sizeSqft === null || input.sizeSqft === undefined || Number(input.sizeSqft) === 0
+        ? null
+        : Math.round(Number(input.sizeSqft));
+    if (size !== null && (!Number.isFinite(size) || size < 1))
+      throw new Error("Room size must be a positive number.");
+    return {
+      roomId: String(input.roomId),
+      name,
+      description: String(input.description ?? "")
+        .trim()
+        .slice(0, 1000),
+      bedType: String(input.bedType ?? "")
+        .trim()
+        .slice(0, 80),
+      sizeSqft: size,
+      viewLabel: String(input.viewLabel ?? "")
+        .trim()
+        .slice(0, 60),
+      features: (input.features ?? [])
+        .map((f) => String(f).trim())
+        .filter(Boolean)
+        .slice(0, 20),
+      imageUrl: cleanUrl(String(input.imageUrl ?? "")),
+      galleryUrls: (input.galleryUrls ?? [])
+        .map((u) => cleanUrl(String(u)))
+        .filter(Boolean)
+        .slice(0, 30),
+      panoramaUrl: cleanUrl(String(input.panoramaUrl ?? "")),
+      videoUrl: cleanUrl(String(input.videoUrl ?? "")),
+      capacity,
+    };
+  })
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Administrator access is required.");
+    const { error } = await context.supabase
+      .from("room_types")
+      .update({
+        name: data.name,
+        description: data.description,
+        bed_type: data.bedType,
+        room_size_sqft: data.sizeSqft,
+        view_label: data.viewLabel,
+        features: data.features,
+        image_url: data.imageUrl,
+        gallery_urls: data.galleryUrls,
+        panorama_url: data.panoramaUrl,
+        video_url: data.videoUrl,
+        max_guests: data.capacity,
+      })
+      .eq("id", data.roomId);
+    if (error) throw new Error("We couldn't save those room details.");
     return { success: true };
   });

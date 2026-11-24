@@ -41,3 +41,24 @@ export function selectionProblem(
     return `These rooms host up to ${capacity} ${capacity === 1 ? "guest" : "guests"}, and you have ${guests}. Add another room or reduce the guests.`;
   return null;
 }
+
+/** Groups free room units by category, keeping the order the server returned. */
+export function groupUnits<T extends { room_type_id: string }>(units: T[]) {
+  const groups = new Map<string, T[]>();
+  for (const unit of units)
+    groups.set(unit.room_type_id, [...(groups.get(unit.room_type_id) ?? []), unit]);
+  return groups;
+}
+
+/** Picks the requested number of free units from each category (never more than are free). */
+export function pickUnits<T extends { room_type_id: string }>(
+  units: T[],
+  quantities: Record<string, number>,
+) {
+  const groups = groupUnits(units);
+  const picked: T[] = [];
+  for (const [typeId, count] of Object.entries(quantities)) {
+    picked.push(...(groups.get(typeId) ?? []).slice(0, Math.max(0, count)));
+  }
+  return picked;
+}

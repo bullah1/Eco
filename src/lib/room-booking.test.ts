@@ -32,3 +32,23 @@ describe("selectionProblem", () => {
     expect(selectionProblem([], 2)).toBeNull();
   });
 });
+
+import { groupUnits, pickUnits } from "./room-booking";
+
+describe("pickUnits", () => {
+  const units = [
+    { room_type_id: "a", id: 1 },
+    { room_type_id: "a", id: 2 },
+    { room_type_id: "b", id: 3 },
+  ];
+  it("takes the requested count per category", () => {
+    expect(pickUnits(units, { a: 2, b: 1 }).map((u) => u.id)).toEqual([1, 2, 3]);
+  });
+  it("never takes more than are free", () => {
+    expect(pickUnits(units, { b: 5 })).toHaveLength(1);
+    expect(pickUnits(units, { a: 0 })).toHaveLength(0);
+  });
+  it("groups by category", () => {
+    expect(groupUnits(units).get("a")).toHaveLength(2);
+  });
+});
