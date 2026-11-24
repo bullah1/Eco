@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, LoaderCircle, Minus, Plus, UserPlus } from "lucide-react";
+import { CalendarPlus, Check, LoaderCircle, Minus, Plus, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -29,42 +29,54 @@ import {
 
 const phoneOk = (v: string) => /^\+?[0-9 -]{7,20}$/.test(v.trim());
 
-export function WalkInDialog({
+export type BookingStart = { checkIn?: string | undefined; unitId?: string | undefined };
+
+/** New booking from the front desk. Arriving today can be checked in straight away. */
+export function BookingDialog({
   open,
   onOpenChange,
   units,
+  start,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   units: PosUnit[];
+  start?: BookingStart | undefined;
 }) {
   const navigate = useNavigate();
   const today = resortToday();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [checkIn, setCheckIn] = useState(today);
   const [checkOut, setCheckOut] = useState(addDays(today, 1));
   const [picked, setPicked] = useState<Record<string, number>>({});
   const [problem, setProblem] = useState("");
 
+  const startIn = start?.checkIn && start.checkIn >= today ? start.checkIn : today;
+  const startUnit = start?.unitId;
   useEffect(() => {
     if (!open) return;
     setName("");
     setPhone("");
     setEmail("");
-    setCheckOut(addDays(today, 1));
-    setPicked({});
+    setNote("");
+    setCheckIn(startIn);
+    setCheckOut(addDays(startIn, 1));
+    setPicked(startUnit ? { [startUnit]: 0 } : {});
     setProblem("");
-  }, [open, today]);
+  }, [open, startIn, startUnit]);
 
-  const n = nights(today, checkOut);
-  const validDates = n >= 1 && n <= 60;
+  const arrivingToday = checkIn === today;
+  const n = nights(checkIn, checkOut);
+  const validDates = checkIn >= today && n >= 1 && n <= 60;
   const free = useQuery({
-    queryKey: ["pos", "free-rooms", today, checkOut],
+    queryKey: ["pos", "free-rooms", checkIn, checkOut],
     enabled: open && validDates,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_available_rooms", {
-        p_check_in: today,
+        p_check_in: checkIn,
         p_check_out: checkOut,
       });
       if (error) throw error;
@@ -75,35 +87,59 @@ export function WalkInDialog({
   // Drop rooms that stopped being free when the dates change.
   useEffect(() => {
     if (!free.data) return;
-    const ids = new Set(free.data.map((r) => r.room_unit_id));
-    setPicked((p) => Object.fromEntries(Object.entries(p).filter(([id]) => ids.has(id))));
+    const rooms = new Map(free.data.map((r) => [r.room_unit_id, r]));
+    setPicked((p) =>
+      Object.fromEntries(
+        Object.entries(p)
+          .filter(([id]) => rooms.has(id))
+          .map(([id, g]) => [id, g || Math.min(2, rooms.get(id)!.max_guests)]),
+      ),
+    );
   }, [free.data]);
 
   const unitById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const chosen = (free.data ?? []).filter((r) => picked[r.room_unit_id]);
   const total = chosen.reduce((s, r) => s + r.nightly_rate_cents * n, 0);
 
-  const action = usePosAction(() =>
-    rpc(
-      supabase.rpc("pos_walk_in", {
-        p_name: name.trim(),
-        p_phone: phone.trim(),
-        p_email: email.trim(),
-        p_check_out: checkOut,
-        p_rooms: chosen.map((r) => ({ unit_id: r.room_unit_id, guests: picked[r.room_unit_id] })),
-      }),
-    ),
+  const rooms = () =>
+    chosen.map((r) => ({ unit_id: r.room_unit_id, guests: picked[r.room_unit_id] }));
+  const action = usePosAction((mode: "check_in" | "book"): Promise<string | null> =>
+    mode === "check_in"
+      ? rpc(
+          supabase.rpc("pos_walk_in", {
+            p_name: name.trim(),
+            p_phone: phone.trim(),
+            p_email: email.trim(),
+            p_check_out: checkOut,
+            p_rooms: rooms(),
+          }),
+        )
+      : rpc(
+          supabase.rpc("pos_book", {
+            p_name: name.trim(),
+            p_phone: phone.trim(),
+            p_email: email.trim(),
+            p_check_in: checkIn,
+            p_check_out: checkOut,
+            p_note: note.trim(),
+            p_rooms: rooms(),
+          }),
+        ).then(() => null),
   );
 
-  function submit() {
+  function submit(mode: "check_in" | "book") {
     setProblem("");
     if (name.trim().length < 2) return setProblem("Enter the guest's full name");
     if (!phoneOk(phone)) return setProblem("Enter a valid mobile number");
-    if (!validDates) return setProblem("Choose a departure 1 to 60 nights from today");
+    if (!validDates) return setProblem("Choose an arrival from today and a stay of 1 to 60 nights");
     if (chosen.length === 0) return setProblem("Choose at least one room");
-    action.mutate(undefined, {
+    action.mutate(mode, {
       onSuccess: (accountId) => {
-        toast.success(`${name.trim()} is checked in`);
+        toast.success(
+          mode === "check_in"
+            ? `${name.trim()} is checked in`
+            : `Booked ${name.trim()} for ${shortDate(checkIn)}`,
+        );
         onOpenChange(false);
         if (accountId) void navigate({ to: "/pos/account/$id", params: { id: accountId } });
       },
@@ -118,9 +154,9 @@ export function WalkInDialog({
     <Dialog open={open} onOpenChange={(o) => !action.isPending && onOpenChange(o)}>
       <DialogContent className="max-h-[92svh] overflow-y-auto font-sans sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Walk-in guest</DialogTitle>
+          <DialogTitle>New booking</DialogTitle>
           <DialogDescription>
-            Book and check in now. Breakfast is included with every room.
+            Arriving today can check in straight away. Breakfast is included with every room.
           </DialogDescription>
         </DialogHeader>
 
@@ -160,21 +196,49 @@ export function WalkInDialog({
             />
           </div>
           <div className="grid gap-1.5">
+            <Label htmlFor="wi-in">Arriving on</Label>
+            <Input
+              id="wi-in"
+              type="date"
+              min={today}
+              className="h-11 text-base sm:text-sm"
+              value={checkIn}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCheckIn(v);
+                if (v && checkOut <= v) setCheckOut(addDays(v, 1));
+              }}
+            />
+          </div>
+          <div className="grid gap-1.5">
             <Label htmlFor="wi-out">Leaving on</Label>
             <Input
               id="wi-out"
               type="date"
-              min={addDays(today, 1)}
-              max={addDays(today, 60)}
+              min={addDays(checkIn || today, 1)}
+              max={addDays(checkIn || today, 60)}
               className="h-11 text-base sm:text-sm"
               value={checkOut}
               onChange={(e) => setCheckOut(e.target.value)}
             />
           </div>
-          <p className="self-end pb-3 text-sm text-pos-muted">
+          <div className="grid gap-1.5 sm:col-span-2">
+            <Label htmlFor="wi-note">
+              Note <span className="font-normal text-pos-muted">(optional)</span>
+            </Label>
+            <Input
+              id="wi-note"
+              placeholder="Late arrival, advance paid by bKash, etc."
+              className="h-11 text-base sm:text-sm"
+              value={note}
+              maxLength={500}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+          <p className="text-sm text-pos-muted sm:col-span-2">
             {validDates
-              ? `${shortDate(today)} – ${shortDate(checkOut)} · ${n} ${n === 1 ? "night" : "nights"}`
-              : "Choose a date after today"}
+              ? `${shortDate(checkIn)} – ${shortDate(checkOut)} · ${n} ${n === 1 ? "night" : "nights"}`
+              : "Choose an arrival from today and a departure after it"}
           </p>
         </div>
 
@@ -275,18 +339,35 @@ export function WalkInDialog({
             <span className="text-xs text-pos-muted">Room total</span>
             <span className="block text-2xl font-semibold tabular-nums">{taka(total)}</span>
           </p>
-          <Button
-            onClick={submit}
-            disabled={action.isPending}
-            className="h-11 gap-2 bg-pos-ocean px-6 text-white hover:bg-pos-ocean/90"
-          >
-            {action.isPending ? (
-              <LoaderCircle size={16} className="animate-spin" />
-            ) : (
-              <UserPlus size={16} />
-            )}{" "}
-            Check in now
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={arrivingToday ? "outline" : "default"}
+              onClick={() => submit("book")}
+              disabled={action.isPending}
+              className={`h-11 gap-2 px-5 ${arrivingToday ? "" : "bg-pos-ocean text-white hover:bg-pos-ocean/90"}`}
+            >
+              {action.isPending && action.variables === "book" ? (
+                <LoaderCircle size={16} className="animate-spin" />
+              ) : (
+                <CalendarPlus size={16} />
+              )}{" "}
+              {arrivingToday ? "Book only" : "Save booking"}
+            </Button>
+            {arrivingToday && (
+              <Button
+                onClick={() => submit("check_in")}
+                disabled={action.isPending}
+                className="h-11 gap-2 bg-pos-ocean px-6 text-white hover:bg-pos-ocean/90"
+              >
+                {action.isPending && action.variables === "check_in" ? (
+                  <LoaderCircle size={16} className="animate-spin" />
+                ) : (
+                  <UserPlus size={16} />
+                )}{" "}
+                Check in now
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

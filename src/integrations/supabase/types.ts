@@ -1047,6 +1047,20 @@ export type Database = {
         Args: { p_check_out: string; p_email: string; p_name: string; p_phone: string; p_rooms: Json }
         Returns: string
       }
+      pos_book: {
+        Args: {
+          p_check_in: string
+          p_check_out: string
+          p_email: string
+          p_name: string
+          p_note: string
+          p_phone: string
+          p_rooms: Json
+        }
+        Returns: string
+      }
+      pos_confirm_booking: { Args: { p_reservation: string }; Returns: number }
+      pos_cancel_booking: { Args: { p_reason: string; p_reservation: string }; Returns: number }
       resort_today: { Args: never; Returns: string }
       find_order: {
         Args: { p_order_number: string; p_phone: string }

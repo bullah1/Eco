@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   ArrowRight,
   BedDouble,
+  CalendarDays,
+  CalendarPlus,
+  LayoutGrid,
   LoaderCircle,
   LogIn,
   Phone,
@@ -44,7 +47,8 @@ import {
   type TileState,
 } from "@/lib/pos";
 import { LoadState, PageTitle, Panel } from "./pos-shell";
-import { WalkInDialog } from "./walk-in-dialog";
+import { BookingDialog, type BookingStart } from "./walk-in-dialog";
+import { FrontDeskCalendar } from "./front-desk-calendar";
 
 const tileLook: Record<TileState, { label: string; cls: string }> = {
   in_house: { label: "In house", cls: "border-pos-ocean bg-pos-ocean text-white" },
@@ -63,7 +67,9 @@ const tileLook: Record<TileState, { label: string; cls: string }> = {
 
 export function FrontDesk() {
   const board = useBoardData();
-  const [walkIn, setWalkIn] = useState(false);
+  const navigate = useNavigate();
+  const view = useSearch({ strict: false }).view === "calendar" ? "calendar" : "today";
+  const [booking, setBooking] = useState<BookingStart | null>(null);
   const [openTile, setOpenTile] = useState<BoardTile | null>(null);
   const [checkIn, setCheckIn] = useState<Arrival | null>(null);
 
@@ -127,12 +133,44 @@ export function FrontDesk() {
             : undefined
         }
         actions={
-          <Button
-            onClick={() => setWalkIn(true)}
-            className="h-11 gap-2 bg-pos-gold px-5 font-semibold text-pos-ocean hover:bg-pos-gold/85"
-          >
-            <UserPlus size={18} /> Walk-in guest
-          </Button>
+          <>
+            <div
+              role="tablist"
+              aria-label="Front desk view"
+              className="flex rounded-lg border border-pos-line bg-white p-1"
+            >
+              {(
+                [
+                  ["today", "Today", LayoutGrid],
+                  ["calendar", "Calendar", CalendarDays],
+                ] as const
+              ).map(([id, text, Icon]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === id}
+                  onClick={() =>
+                    void navigate({
+                      to: "/pos",
+                      search: id === "calendar" ? { view: "calendar" } : {},
+                      replace: true,
+                    })
+                  }
+                  className={`flex h-9 items-center gap-1.5 rounded-md px-3 text-sm transition-colors ${view === id ? "bg-pos-ocean font-medium text-white" : "text-pos-muted hover:text-pos-ink"}`}
+                >
+                  <Icon size={16} strokeWidth={1.7} /> {text}
+                </button>
+              ))}
+            </div>
+            <Button
+              onClick={() => setBooking({})}
+              className="h-11 gap-2 bg-pos-gold px-5 font-semibold text-pos-ocean hover:bg-pos-gold/85"
+            >
+              {view === "calendar" ? <CalendarPlus size={18} /> : <UserPlus size={18} />} New
+              booking
+            </Button>
+          </>
         }
       />
 
@@ -142,7 +180,16 @@ export function FrontDesk() {
         retry={() => void board.refetch()}
       />
 
-      {board.data && (
+      {board.data && view === "calendar" && (
+        <FrontDeskCalendar
+          units={board.data.units}
+          today={today}
+          onBook={(start) => setBooking(start)}
+          onCheckIn={setCheckIn}
+        />
+      )}
+
+      {board.data && view === "today" && (
         <>
           <section
             aria-label="Today at a glance"
@@ -324,7 +371,12 @@ export function FrontDesk() {
         </>
       )}
 
-      <WalkInDialog open={walkIn} onOpenChange={setWalkIn} units={board.data?.units ?? []} />
+      <BookingDialog
+        open={booking !== null}
+        onOpenChange={(o) => !o && setBooking(null)}
+        units={board.data?.units ?? []}
+        start={booking ?? undefined}
+      />
       <RoomSheet
         tile={openTile}
         onClose={() => setOpenTile(null)}

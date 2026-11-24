@@ -148,33 +148,46 @@ function Frame({ children }: { children: ReactNode }) {
 
   const nav = [
     {
+      section: "Front office",
       to: "/pos",
       label: "Front desk",
+      short: "Desk",
       Icon: LayoutGrid,
       active: pathname === "/pos" || pathname === "/pos/",
     },
     {
+      section: "Front office",
       to: "/pos/guests",
       label: "Guests",
       Icon: Users,
       active: pathname.startsWith("/pos/guests") || pathname.startsWith("/pos/account"),
     },
     {
+      section: "Restaurant",
       to: "/pos/restaurant",
       label: "Restaurant",
       Icon: UtensilsCrossed,
       active: pathname.startsWith("/pos/restaurant"),
     },
     {
+      section: "Restaurant",
       to: "/pos/kitchen",
       label: "Kitchen",
       Icon: ChefHat,
       active: pathname.startsWith("/pos/kitchen"),
     },
-    { to: "/pos/cash", label: "Cash", Icon: Wallet, active: pathname.startsWith("/pos/cash") },
     {
+      section: "Money",
+      to: "/pos/cash",
+      label: "Cash",
+      Icon: Wallet,
+      active: pathname.startsWith("/pos/cash"),
+    },
+    {
+      section: "Front office",
       to: "/pos/orders",
-      label: "Orders",
+      label: "Website orders",
+      short: "Orders",
       Icon: ShoppingBag,
       active: pathname.startsWith("/pos/orders"),
       badge: waiting,
@@ -182,6 +195,7 @@ function Frame({ children }: { children: ReactNode }) {
     ...(isAdmin
       ? [
           {
+            section: "Settings",
             to: "/pos/staff",
             label: "Staff",
             Icon: ShieldCheck,
@@ -190,6 +204,9 @@ function Frame({ children }: { children: ReactNode }) {
         ]
       : []),
   ] as const;
+  const sections = ["Front office", "Restaurant", "Money", "Settings"]
+    .map((title) => ({ title, items: nav.filter((n) => n.section === title) }))
+    .filter((s) => s.items.length > 0);
 
   return (
     <div className="min-h-svh bg-pos-ground font-sans text-[14px] text-pos-ink print:bg-white">
@@ -209,25 +226,32 @@ function Frame({ children }: { children: ReactNode }) {
             <span className="text-[11px] text-pos-sand/70">Front desk</span>
           </span>
         </div>
-        <nav className="grid gap-1">
-          {nav.map(({ to, label, Icon, active, ...rest }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`flex h-10 items-center gap-2.5 rounded-lg px-3 transition-colors ${
-                active
-                  ? "bg-white/12 font-medium text-white"
-                  : "text-pos-sand/75 hover:bg-white/6 hover:text-white"
-              }`}
-            >
-              <Icon size={18} strokeWidth={1.6} />
-              <span className="flex-1">{label}</span>
-              {"badge" in rest && rest.badge > 0 && (
-                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-pos-gold px-1.5 text-[11px] font-semibold text-pos-ocean">
-                  {rest.badge}
-                </span>
-              )}
-            </Link>
+        <nav className="grid gap-5">
+          {sections.map((section) => (
+            <div key={section.title}>
+              <p className="mb-1.5 px-3 text-[11px] text-pos-sand/55">{section.title}</p>
+              <div className="grid gap-0.5">
+                {section.items.map(({ to, label, Icon, active, ...rest }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={`flex h-9 items-center gap-2.5 rounded-lg px-3 transition-colors ${
+                      active
+                        ? "bg-white/12 font-medium text-white"
+                        : "text-pos-sand/75 hover:bg-white/6 hover:text-white"
+                    }`}
+                  >
+                    <Icon size={18} strokeWidth={1.6} />
+                    <span className="flex-1">{label}</span>
+                    {"badge" in rest && rest.badge > 0 && (
+                      <span className="grid h-5 min-w-5 place-items-center rounded-full bg-pos-gold px-1.5 text-[11px] font-semibold text-pos-ocean">
+                        {rest.badge}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
         <div className="mt-auto grid gap-2 border-t border-white/12 px-2 pt-4 text-xs">
@@ -316,7 +340,7 @@ function Frame({ children }: { children: ReactNode }) {
           >
             {active && <span className="absolute inset-x-6 top-0 h-0.5 rounded-full bg-pos-gold" />}
             <Icon size={20} strokeWidth={1.6} />
-            {label}
+            {"short" in rest ? rest.short : label}
             {"badge" in rest && rest.badge > 0 && (
               <span className="absolute right-[calc(50%-22px)] top-2 grid h-4 min-w-4 place-items-center rounded-full bg-pos-gold px-1 text-[10px] font-semibold text-pos-ocean">
                 {rest.badge}
