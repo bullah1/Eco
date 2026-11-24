@@ -42,6 +42,8 @@ export function AuthScreen() {
           ...(guests ? { guests } : {}),
         },
       });
+    } else if (target === "/pos") {
+      void navigate({ to: "/pos" });
     } else if (target === "/admin") {
       void navigate({ to: "/admin" });
     } else if (target === "/account") {
@@ -62,6 +64,8 @@ export function AuthScreen() {
           ...(search.guests ? { guests: search.guests } : {}),
         },
       });
+    } else if (next === "/pos") {
+      await navigate({ to: "/pos" });
     } else if (next === "/admin") {
       await navigate({ to: "/admin" });
     } else if (next === "/account") {

@@ -613,3 +613,87 @@ BEGIN
 END $$;
 GRANT EXECUTE ON FUNCTION public.is_staff(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.resort_today() TO anon, authenticated;
+
+-- ---------- phase 1 fixes: leaving early, same-day stays, server-priced menu items ----------
+-- Shorten every checked-in room on the account so the stay ends today (one night minimum),
+-- re-pricing the room charges. The guest then pays the new balance and checks out.
+CREATE OR REPLACE FUNCTION public.pos_end_stay_today(p_account uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE r record; v_end date;
+BEGIN
+  PERFORM public.pos_require_staff();
+  PERFORM public.pos_lock_open_account(p_account);
+  IF NOT EXISTS (SELECT 1 FROM public.reservations WHERE account_id = p_account AND stay_status = 'in_house') THEN
+    RAISE EXCEPTION 'No rooms on this account are checked in' USING ERRCODE = 'P0001';
+  END IF;
+  FOR r IN SELECT * FROM public.reservations WHERE account_id = p_account AND stay_status = 'in_house' FOR UPDATE LOOP
+    v_end := GREATEST(public.resort_today(), r.check_in + 1);
+    CONTINUE WHEN r.check_out <= v_end;
+    UPDATE public.reservations SET check_out = v_end, total_cents = nightly_rate_cents * (v_end - check_in)
+     WHERE id = r.id;
+    UPDATE public.account_charges SET voided_at = now(), voided_by = auth.uid(),
+           void_reason = format('Guest left early on %s', to_char(public.resort_today(), 'DD Mon'))
+     WHERE reservation_id = r.id AND kind = 'room' AND voided_at IS NULL;
+    PERFORM public.pos_post_room_charge(r.id, p_account);
+  END LOOP;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.pos_check_out(p_account uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE v_balance bigint; v_order text;
+BEGIN
+  PERFORM public.pos_require_staff();
+  PERFORM public.pos_lock_open_account(p_account);
+  IF NOT EXISTS (SELECT 1 FROM public.reservations WHERE account_id = p_account AND stay_status = 'in_house') THEN
+    RAISE EXCEPTION 'No rooms on this account are checked in' USING ERRCODE = 'P0001';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.reservations WHERE account_id = p_account AND stay_status = 'in_house'
+              AND check_out > GREATEST(public.resort_today(), check_in + 1)) THEN
+    RAISE EXCEPTION 'The guest is leaving early. End the stay today first so the room charge is right' USING ERRCODE = 'P0003';
+  END IF;
+  SELECT o.order_number INTO v_order FROM public.service_orders o
+   JOIN public.reservations r ON r.id = o.reservation_id
+   WHERE r.account_id = p_account AND o.bill_status = 'unbilled' AND o.status <> 'cancelled'
+     AND o.subtotal_cents > 0 LIMIT 1;
+  IF v_order IS NOT NULL THEN
+    RAISE EXCEPTION 'Website order % is not on the bill yet', v_order USING ERRCODE = 'P0001';
+  END IF;
+  SELECT balance_cents INTO v_balance FROM public.stay_account_totals WHERE account_id = p_account;
+  IF v_balance <> 0 THEN
+    RAISE EXCEPTION 'Collect the balance of ৳% before check-out', rtrim(to_char(v_balance / 100.0, 'FM99,99,99,990.99'), '.') USING ERRCODE = 'P0001';
+  END IF;
+  UPDATE public.room_units SET housekeeping = 'dirty'
+   WHERE id IN (SELECT room_unit_id FROM public.reservations WHERE account_id = p_account AND stay_status = 'in_house');
+  UPDATE public.reservations SET stay_status = 'checked_out', checked_out_at = now()
+   WHERE account_id = p_account AND stay_status = 'in_house';
+  UPDATE public.stay_accounts SET status = 'closed', closed_at = now(), closed_by = auth.uid() WHERE id = p_account;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.pos_add_menu_item(p_account uuid, p_menu_item uuid, p_quantity int)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE m record; v_id uuid;
+BEGIN
+  PERFORM public.pos_require_staff();
+  PERFORM public.pos_lock_open_account(p_account);
+  SELECT * INTO m FROM public.menu_items WHERE id = p_menu_item AND is_available;
+  IF NOT FOUND THEN RAISE EXCEPTION 'This dish is not available' USING ERRCODE = 'P0001'; END IF;
+  IF p_quantity IS NULL OR p_quantity < 1 OR p_quantity > 999 THEN
+    RAISE EXCEPTION 'Quantity must be between 1 and 999' USING ERRCODE = 'P0001';
+  END IF;
+  IF m.price_cents <= 0 THEN RAISE EXCEPTION 'This dish has no price' USING ERRCODE = 'P0001'; END IF;
+  INSERT INTO public.account_charges (account_id, kind, source, description, quantity, unit_price_cents, created_by)
+  VALUES (p_account, 'food', 'restaurant', m.name, p_quantity, m.price_cents, auth.uid())
+  RETURNING id INTO v_id;
+  RETURN v_id;
+END $$;
+
+REVOKE ALL ON FUNCTION public.pos_end_stay_today(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.pos_end_stay_today(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.pos_add_menu_item(uuid, uuid, integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.pos_add_menu_item(uuid, uuid, integer) TO authenticated;

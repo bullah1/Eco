@@ -170,6 +170,18 @@
   --color-resort-gold-deep: var(--resort-gold-deep);
   --color-resort-teal: var(--resort-teal);
   --color-resort-deep: var(--resort-deep);
+
+  /* Front-desk POS: quiet neutral ground, ocean chrome, sand-gold for the one action that matters */
+  --color-pos-ground: #f4f2ee;
+  --color-pos-line: #e2ded6;
+  --color-pos-ink: #16262a;
+  --color-pos-muted: #5c6b6e;
+  --color-pos-ocean: #0e3b43;
+  --color-pos-gold: #c8a46b;
+  --color-pos-gold-deep: #7a5c27;
+  --color-pos-teal: #2f7f7d;
+  --color-pos-teal-soft: #dcefee;
+  --color-pos-sand: #f6f1e9;
 }
 
 @layer base {
@@ -233,4 +245,13 @@
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body {
+    background: #fff !important;
+  }
 }

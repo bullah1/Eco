@@ -19,8 +19,14 @@ import { Route as ExperiencesRouteImport } from './routes/experiences'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as MyStaysRouteImport } from './routes/my-stays'
 import { Route as OrderRouteImport } from './routes/order'
+import { Route as PosRouteImport } from './routes/pos'
 import { Route as StaysRouteImport } from './routes/stays'
+import { Route as PosIndexRouteImport } from './routes/pos.index'
+import { Route as PosGuestsRouteImport } from './routes/pos.guests'
+import { Route as PosOrdersRouteImport } from './routes/pos.orders'
+import { Route as PosStaffRouteImport } from './routes/pos.staff'
 import { Route as RoomsSlugRouteImport } from './routes/rooms.$slug'
+import { Route as PosAccountIdRouteImport } from './routes/pos.account.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -72,15 +78,45 @@ const OrderRoute = OrderRouteImport.update({
   path: '/order',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PosRoute = PosRouteImport.update({
+  id: '/pos',
+  path: '/pos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaysRoute = StaysRouteImport.update({
   id: '/stays',
   path: '/stays',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PosIndexRoute = PosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosGuestsRoute = PosGuestsRouteImport.update({
+  id: '/guests',
+  path: '/guests',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosOrdersRoute = PosOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosStaffRoute = PosStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => PosRoute,
+} as any)
 const RoomsSlugRoute = RoomsSlugRouteImport.update({
   id: '/rooms/$slug',
   path: '/rooms/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PosAccountIdRoute = PosAccountIdRouteImport.update({
+  id: '/account/$id',
+  path: '/account/$id',
+  getParentRoute: () => PosRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -94,8 +130,14 @@ export interface FileRoutesByFullPath {
   '/gallery': typeof GalleryRoute
   '/my-stays': typeof MyStaysRoute
   '/order': typeof OrderRoute
+  '/pos': typeof PosRouteWithChildren
   '/stays': typeof StaysRoute
+  '/pos/guests': typeof PosGuestsRoute
+  '/pos/orders': typeof PosOrdersRoute
+  '/pos/staff': typeof PosStaffRoute
   '/rooms/$slug': typeof RoomsSlugRoute
+  '/pos/': typeof PosIndexRoute
+  '/pos/account/$id': typeof PosAccountIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,7 +151,12 @@ export interface FileRoutesByTo {
   '/my-stays': typeof MyStaysRoute
   '/order': typeof OrderRoute
   '/stays': typeof StaysRoute
+  '/pos/guests': typeof PosGuestsRoute
+  '/pos/orders': typeof PosOrdersRoute
+  '/pos/staff': typeof PosStaffRoute
   '/rooms/$slug': typeof RoomsSlugRoute
+  '/pos': typeof PosIndexRoute
+  '/pos/account/$id': typeof PosAccountIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -123,8 +170,14 @@ export interface FileRoutesById {
   '/gallery': typeof GalleryRoute
   '/my-stays': typeof MyStaysRoute
   '/order': typeof OrderRoute
+  '/pos': typeof PosRouteWithChildren
   '/stays': typeof StaysRoute
+  '/pos/guests': typeof PosGuestsRoute
+  '/pos/orders': typeof PosOrdersRoute
+  '/pos/staff': typeof PosStaffRoute
   '/rooms/$slug': typeof RoomsSlugRoute
+  '/pos/': typeof PosIndexRoute
+  '/pos/account/$id': typeof PosAccountIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -139,8 +192,14 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/my-stays'
     | '/order'
+    | '/pos'
     | '/stays'
+    | '/pos/guests'
+    | '/pos/orders'
+    | '/pos/staff'
     | '/rooms/$slug'
+    | '/pos/'
+    | '/pos/account/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -154,7 +213,12 @@ export interface FileRouteTypes {
     | '/my-stays'
     | '/order'
     | '/stays'
+    | '/pos/guests'
+    | '/pos/orders'
+    | '/pos/staff'
     | '/rooms/$slug'
+    | '/pos'
+    | '/pos/account/$id'
   id:
     | '__root__'
     | '/'
@@ -167,8 +231,14 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/my-stays'
     | '/order'
+    | '/pos'
     | '/stays'
+    | '/pos/guests'
+    | '/pos/orders'
+    | '/pos/staff'
     | '/rooms/$slug'
+    | '/pos/'
+    | '/pos/account/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -182,6 +252,7 @@ export interface RootRouteChildren {
   GalleryRoute: typeof GalleryRoute
   MyStaysRoute: typeof MyStaysRoute
   OrderRoute: typeof OrderRoute
+  PosRoute: typeof PosRouteWithChildren
   StaysRoute: typeof StaysRoute
   RoomsSlugRoute: typeof RoomsSlugRoute
 }
@@ -258,12 +329,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pos': {
+      id: '/pos'
+      path: '/pos'
+      fullPath: '/pos'
+      preLoaderRoute: typeof PosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stays': {
       id: '/stays'
       path: '/stays'
       fullPath: '/stays'
       preLoaderRoute: typeof StaysRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/pos/': {
+      id: '/pos/'
+      path: '/'
+      fullPath: '/pos/'
+      preLoaderRoute: typeof PosIndexRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/guests': {
+      id: '/pos/guests'
+      path: '/guests'
+      fullPath: '/pos/guests'
+      preLoaderRoute: typeof PosGuestsRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/orders': {
+      id: '/pos/orders'
+      path: '/orders'
+      fullPath: '/pos/orders'
+      preLoaderRoute: typeof PosOrdersRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/staff': {
+      id: '/pos/staff'
+      path: '/staff'
+      fullPath: '/pos/staff'
+      preLoaderRoute: typeof PosStaffRouteImport
+      parentRoute: typeof PosRoute
     }
     '/rooms/$slug': {
       id: '/rooms/$slug'
@@ -272,8 +378,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pos/account/$id': {
+      id: '/pos/account/$id'
+      path: '/account/$id'
+      fullPath: '/pos/account/$id'
+      preLoaderRoute: typeof PosAccountIdRouteImport
+      parentRoute: typeof PosRoute
+    }
   }
 }
+
+interface PosRouteChildren {
+  PosGuestsRoute: typeof PosGuestsRoute
+  PosOrdersRoute: typeof PosOrdersRoute
+  PosStaffRoute: typeof PosStaffRoute
+  PosIndexRoute: typeof PosIndexRoute
+  PosAccountIdRoute: typeof PosAccountIdRoute
+}
+
+const PosRouteChildren: PosRouteChildren = {
+  PosGuestsRoute: PosGuestsRoute,
+  PosOrdersRoute: PosOrdersRoute,
+  PosStaffRoute: PosStaffRoute,
+  PosIndexRoute: PosIndexRoute,
+  PosAccountIdRoute: PosAccountIdRoute,
+}
+
+const PosRouteWithChildren = PosRoute._addFileChildren(PosRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -286,6 +417,7 @@ const rootRouteChildren: RootRouteChildren = {
   GalleryRoute: GalleryRoute,
   MyStaysRoute: MyStaysRoute,
   OrderRoute: OrderRoute,
+  PosRoute: PosRouteWithChildren,
   StaysRoute: StaysRoute,
   RoomsSlugRoute: RoomsSlugRoute,
 }

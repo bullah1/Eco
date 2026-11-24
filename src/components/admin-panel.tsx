@@ -182,6 +182,12 @@ export function AdminPage() {
                 </TabsTrigger>
                 <TabsTrigger
                   className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-resort-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  value="addons"
+                >
+                  <UtensilsCrossed size={15} /> Services
+                </TabsTrigger>
+                <TabsTrigger
+                  className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-resort-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   value="gallery"
                 >
                   <FileImage size={15} /> Gallery
@@ -218,6 +224,9 @@ export function AdminPage() {
               </TabsContent>
               <TabsContent value="reviews" className="mt-0">
                 <ReviewsAdmin items={data.reviews} panelKey="reviews" />
+              </TabsContent>
+              <TabsContent value="addons" className="mt-0">
+                <AddonsAdmin items={data.addons} panelKey="addons" />
               </TabsContent>
               <TabsContent value="gallery" className="mt-0">
                 <GalleryAdmin items={data.gallery} panelKey="gallery" />
@@ -947,11 +956,12 @@ function AddonsAdmin({ items, panelKey }: { items: any[]; panelKey: AdminPanelKe
   return (
     <section className="grid gap-8 border-y border-border bg-background p-5 sm:p-7 lg:grid-cols-[1.2fr_0.8fr]">
       <div>
-        <Eyebrow>Guests add these when they book</Eyebrow>
-        <h2 className="mt-3 font-display text-3xl text-primary">Meals & extras</h2>
+        <Eyebrow>The front desk adds these to guest bills</Eyebrow>
+        <h2 className="mt-3 font-display text-3xl text-primary">Services and trips</h2>
         {items.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">
-            Nothing listed yet. Add breakfast, lunch, boat trips and other services.
+            Nothing listed yet. Add boat trips, jetty pick-up, laundry and other services with their
+            price.
           </p>
         ) : (
           <div className="mt-6">

@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_charges: {
+        Row: {
+          account_id: string
+          addon_id: string | null
+          amount_cents: number | null
+          charge_date: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          kind: string
+          order_id: string | null
+          quantity: number
+          reservation_id: string | null
+          source: string
+          unit_price_cents: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          account_id: string
+          addon_id?: string | null
+          amount_cents?: number | null
+          charge_date?: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          kind: string
+          order_id?: string | null
+          quantity: number
+          reservation_id?: string | null
+          source?: string
+          unit_price_cents: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          addon_id?: string | null
+          amount_cents?: number | null
+          charge_date?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          kind?: string
+          order_id?: string | null
+          quantity?: number
+          reservation_id?: string | null
+          source?: string
+          unit_price_cents?: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: []
+      }
+      account_payments: {
+        Row: {
+          account_id: string
+          amount_cents: number
+          created_at: string
+          id: string
+          method: string
+          received_by: string | null
+          reference: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          account_id: string
+          amount_cents: number
+          created_at?: string
+          id?: string
+          method: string
+          received_by?: string | null
+          reference?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          method?: string
+          received_by?: string | null
+          reference?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: []
+      }
       guest_reviews: {
         Row: {
           comment: string
@@ -160,7 +259,11 @@ export type Database = {
       }
       reservations: {
         Row: {
+          account_id: string | null
           booking_group: string | null
+          checked_in_at: string | null
+          checked_out_at: string | null
+          stay_status: string
           booking_reference: string
           check_in: string
           check_out: string
@@ -178,7 +281,11 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          account_id?: string | null
           booking_group?: string | null
+          checked_in_at?: string | null
+          checked_out_at?: string | null
+          stay_status?: string
           booking_reference?: string
           guest_email?: string
           guest_name?: string
@@ -196,7 +303,11 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          account_id?: string | null
           booking_group?: string | null
+          checked_in_at?: string | null
+          checked_out_at?: string | null
+          stay_status?: string
           booking_reference?: string
           guest_email?: string
           guest_name?: string
@@ -386,6 +497,7 @@ export type Database = {
       room_units: {
         Row: {
           created_at: string
+          housekeeping: string
           id: string
           is_active: boolean
           name: string
@@ -393,6 +505,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          housekeeping?: string
           id?: string
           is_active?: boolean
           name: string
@@ -400,6 +513,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          housekeeping?: string
           id?: string
           is_active?: boolean
           name?: string
@@ -519,6 +633,51 @@ export type Database = {
           },
         ]
       }
+      stay_accounts: {
+        Row: {
+          account_no: string
+          booking_group: string | null
+          closed_at: string | null
+          closed_by: string | null
+          guest_email: string
+          guest_name: string
+          guest_phone: string
+          id: string
+          note: string
+          opened_at: string
+          opened_by: string | null
+          status: string
+        }
+        Insert: {
+          account_no?: string
+          booking_group?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          guest_email?: string
+          guest_name: string
+          guest_phone?: string
+          id?: string
+          note?: string
+          opened_at?: string
+          opened_by?: string | null
+          status?: string
+        }
+        Update: {
+          account_no?: string
+          booking_group?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          guest_email?: string
+          guest_name?: string
+          guest_phone?: string
+          id?: string
+          note?: string
+          opened_at?: string
+          opened_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -542,9 +701,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      stay_account_totals: {
+        Row: {
+          account_id: string | null
+          balance_cents: number | null
+          charges_cents: number | null
+          food_cents: number | null
+          paid_cents: number | null
+          room_cents: number | null
+          service_cents: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
+      pos_add_charge: {
+        Args: {
+          p_account: string
+          p_description: string
+          p_kind: string
+          p_quantity: number
+          p_source?: string
+          p_unit_price_cents: number
+        }
+        Returns: string
+      }
+      pos_add_payment: {
+        Args: { p_account: string; p_amount_cents: number; p_method: string; p_reference: string }
+        Returns: string
+      }
+      pos_add_service: {
+        Args: { p_account: string; p_addon_id: string; p_quantity: number }
+        Returns: string
+      }
+      pos_add_menu_item: {
+        Args: { p_account: string; p_menu_item: string; p_quantity: number }
+        Returns: string
+      }
+      pos_end_stay_today: { Args: { p_account: string }; Returns: undefined }
+      pos_change_departure: { Args: { p_account: string; p_check_out: string }; Returns: undefined }
+      pos_charge_order: { Args: { p_account: string; p_order_id: string }; Returns: string }
+      pos_check_in: { Args: { p_reservation_ids: string[] }; Returns: string }
+      pos_check_out: { Args: { p_account: string }; Returns: undefined }
+      pos_list_staff: {
+        Args: never
+        Returns: { display_name: string; email: string; role: string; user_id: string }[]
+      }
+      pos_set_housekeeping: { Args: { p_state: string; p_unit: string }; Returns: undefined }
+      pos_set_staff: { Args: { p_email: string; p_is_staff: boolean }; Returns: undefined }
+      pos_void_charge: { Args: { p_charge: string; p_reason: string }; Returns: undefined }
+      pos_void_payment: { Args: { p_payment: string; p_reason: string }; Returns: undefined }
+      pos_walk_in: {
+        Args: { p_check_out: string; p_email: string; p_name: string; p_phone: string; p_rooms: Json }
+        Returns: string
+      }
+      resort_today: { Args: never; Returns: string }
       find_order: {
         Args: { p_order_number: string; p_phone: string }
         Returns: {
@@ -637,7 +849,7 @@ export type Database = {
     Enums: {
       addon_category: "food" | "service" | "activity"
       addon_unit: "per_person" | "per_person_per_night" | "per_night" | "per_stay"
-      app_role: "admin" | "guest"
+      app_role: "admin" | "guest" | "staff"
       reservation_status: "pending" | "confirmed" | "cancelled"
     }
     CompositeTypes: {
@@ -768,7 +980,7 @@ export const Constants = {
     Enums: {
       addon_category: ["food", "service", "activity"],
       addon_unit: ["per_person", "per_person_per_night", "per_night", "per_stay"],
-      app_role: ["admin", "guest"],
+      app_role: ["admin", "guest", "staff"],
       reservation_status: ["pending", "confirmed", "cancelled"],
     },
   },
