@@ -18,6 +18,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as ExperiencesRouteImport } from './routes/experiences'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as MyStaysRouteImport } from './routes/my-stays'
+import { Route as OrderRouteImport } from './routes/order'
 import { Route as StaysRouteImport } from './routes/stays'
 import { Route as RoomsSlugRouteImport } from './routes/rooms.$slug'
 
@@ -66,6 +67,11 @@ const MyStaysRoute = MyStaysRouteImport.update({
   path: '/my-stays',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrderRoute = OrderRouteImport.update({
+  id: '/order',
+  path: '/order',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaysRoute = StaysRouteImport.update({
   id: '/stays',
   path: '/stays',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/experiences': typeof ExperiencesRoute
   '/gallery': typeof GalleryRoute
   '/my-stays': typeof MyStaysRoute
+  '/order': typeof OrderRoute
   '/stays': typeof StaysRoute
   '/rooms/$slug': typeof RoomsSlugRoute
 }
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/experiences': typeof ExperiencesRoute
   '/gallery': typeof GalleryRoute
   '/my-stays': typeof MyStaysRoute
+  '/order': typeof OrderRoute
   '/stays': typeof StaysRoute
   '/rooms/$slug': typeof RoomsSlugRoute
 }
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/experiences': typeof ExperiencesRoute
   '/gallery': typeof GalleryRoute
   '/my-stays': typeof MyStaysRoute
+  '/order': typeof OrderRoute
   '/stays': typeof StaysRoute
   '/rooms/$slug': typeof RoomsSlugRoute
 }
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/experiences'
     | '/gallery'
     | '/my-stays'
+    | '/order'
     | '/stays'
     | '/rooms/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/experiences'
     | '/gallery'
     | '/my-stays'
+    | '/order'
     | '/stays'
     | '/rooms/$slug'
   id:
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/experiences'
     | '/gallery'
     | '/my-stays'
+    | '/order'
     | '/stays'
     | '/rooms/$slug'
   fileRoutesById: FileRoutesById
@@ -169,6 +181,7 @@ export interface RootRouteChildren {
   ExperiencesRoute: typeof ExperiencesRoute
   GalleryRoute: typeof GalleryRoute
   MyStaysRoute: typeof MyStaysRoute
+  OrderRoute: typeof OrderRoute
   StaysRoute: typeof StaysRoute
   RoomsSlugRoute: typeof RoomsSlugRoute
 }
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyStaysRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/order': {
+      id: '/order'
+      path: '/order'
+      fullPath: '/order'
+      preLoaderRoute: typeof OrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stays': {
       id: '/stays'
       path: '/stays'
@@ -265,6 +285,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExperiencesRoute: ExperiencesRoute,
   GalleryRoute: GalleryRoute,
   MyStaysRoute: MyStaysRoute,
+  OrderRoute: OrderRoute,
   StaysRoute: StaysRoute,
   RoomsSlugRoute: RoomsSlugRoute,
 }

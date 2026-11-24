@@ -11,7 +11,9 @@ import {
   FileImage,
   LoaderCircle,
   Plus,
+  ReceiptText,
   ShieldCheck,
+  ShoppingBag,
   Star,
   Users,
   UtensilsCrossed,
@@ -42,6 +44,8 @@ import { formatMoney } from "@/lib/room-booking";
 import { categoryLabel, unitLabel, type AddonCategory, type AddonUnit } from "@/lib/addons";
 import {
   moderateReview,
+  saveMenuItem,
+  updateOrder,
   saveAddon,
   updateRoomDetails,
   getAdminOverview,
@@ -57,7 +61,16 @@ import {
 import { useCurrentUser } from "@/lib/auth-context";
 import { Eyebrow } from "@/components/resort-site";
 
-type AdminPanelKey = "rooms" | "bookings" | "guests" | "gallery" | "content" | "addons" | "reviews";
+type AdminPanelKey =
+  | "rooms"
+  | "bookings"
+  | "guests"
+  | "gallery"
+  | "content"
+  | "addons"
+  | "reviews"
+  | "orders"
+  | "menu";
 
 export function AdminPage() {
   const user = useCurrentUser();
@@ -65,6 +78,7 @@ export function AdminPage() {
     queryKey: ["admin-overview", user?.id],
     queryFn: () => getAdminOverview(),
     enabled: Boolean(user),
+    refetchInterval: 30_000,
     retry: false,
   });
   return (
@@ -148,6 +162,20 @@ export function AdminPage() {
                 </TabsTrigger>
                 <TabsTrigger
                   className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-resort-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  value="orders"
+                >
+                  <ReceiptText size={15} /> Orders
+                  {data.orders.some((o: any) => o.status === "pending") &&
+                    ` (${data.orders.filter((o: any) => o.status === "pending").length} new)`}
+                </TabsTrigger>
+                <TabsTrigger
+                  className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-resort-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  value="menu"
+                >
+                  <ShoppingBag size={15} /> Menu
+                </TabsTrigger>
+                <TabsTrigger
+                  className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-resort-gold data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   value="guests"
                 >
                   <Users size={15} /> Guests
@@ -187,6 +215,12 @@ export function AdminPage() {
               </TabsContent>
               <TabsContent value="guests" className="mt-0">
                 <GuestsAdmin guests={data.guests} />
+              </TabsContent>
+              <TabsContent value="orders" className="mt-0">
+                <OrdersAdmin orders={data.orders} panelKey="orders" />
+              </TabsContent>
+              <TabsContent value="menu" className="mt-0">
+                <MenuAdmin items={data.menu} panelKey="menu" />
               </TabsContent>
               <TabsContent value="reviews" className="mt-0">
                 <ReviewsAdmin items={data.reviews} panelKey="reviews" />
@@ -1304,5 +1338,384 @@ function ReviewsAdmin({ items, panelKey }: { items: any[]; panelKey: AdminPanelK
         </p>
       )}
     </section>
+  );
+}
+
+const orderFlow: { status: string; label: string }[] = [
+  { status: "confirmed", label: "Confirm" },
+  { status: "preparing", label: "Preparing" },
+  { status: "served", label: "Served" },
+];
+const orderStatusStyle: Record<string, string> = {
+  pending: "bg-resort-gold/20 text-resort-gold-deep",
+  confirmed: "bg-resort-ocean-soft text-resort-ocean",
+  preparing: "bg-resort-ocean-soft text-resort-ocean",
+  served: "bg-muted text-foreground",
+  cancelled: "bg-muted text-muted-foreground line-through",
+};
+const deliveryLabel: Record<string, string> = {
+  room: "To room",
+  restaurant: "At restaurant",
+  pickup: "Pickup",
+};
+
+function OrdersAdmin({ orders, panelKey }: { orders: any[]; panelKey: AdminPanelKey }) {
+  const { mutation, notice } = useAdminMutation(
+    panelKey,
+    (data: { orderId: string; status?: string; billStatus?: string }) => updateOrder({ data }),
+  );
+  const [filter, setFilter] = useState<"open" | "unbilled" | "all">("open");
+  const open = orders.filter((o) => ["pending", "confirmed", "preparing"].includes(o.status));
+  const unbilled = orders.filter((o) => o.status !== "cancelled" && o.bill_status === "unbilled");
+  const unbilledTotal = unbilled.reduce((sum, o) => sum + o.subtotal_cents, 0);
+  const shown = filter === "open" ? open : filter === "unbilled" ? unbilled : orders;
+
+  return (
+    <section className="border-y border-border bg-background p-5 sm:p-7">
+      <Eyebrow>Food and service orders from guests</Eyebrow>
+      <h2 className="mt-3 font-display text-3xl text-primary">Orders</h2>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <p className="border border-border bg-resort-white p-4">
+          <span className="block text-xs text-muted-foreground">Open orders</span>
+          <span className="font-display text-3xl tabular-nums text-primary">{open.length}</span>
+        </p>
+        <p className="border border-border bg-resort-white p-4">
+          <span className="block text-xs text-muted-foreground">Pending bills</span>
+          <span className="font-display text-3xl tabular-nums text-primary">{unbilled.length}</span>
+        </p>
+        <p className="border border-border bg-resort-white p-4">
+          <span className="block text-xs text-muted-foreground">Unbilled amount</span>
+          <span className="font-display text-3xl tabular-nums text-primary">
+            {formatMoney(unbilledTotal)}
+          </span>
+        </p>
+      </div>
+      <div className="mt-6 flex flex-wrap gap-2" role="tablist" aria-label="Filter orders">
+        {(
+          [
+            ["open", `Open (${open.length})`],
+            ["unbilled", `Pending bills (${unbilled.length})`],
+            ["all", `All (${orders.length})`],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={filter === key}
+            onClick={() => setFilter(key)}
+            className={`h-9 border px-4 text-xs transition-colors ${filter === key ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-resort-gold"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {shown.length === 0 ? (
+        <p className="mt-6 text-sm text-muted-foreground">No orders here.</p>
+      ) : (
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          {shown.map((o) => {
+            const items = (o.service_order_items ?? []) as {
+              name: string;
+              quantity: number;
+              line_total_cents: number;
+            }[];
+            const reference = (o.reservations as { booking_reference: string } | null)
+              ?.booking_reference;
+            return (
+              <article key={o.id} className="border border-border bg-resort-white p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-display text-xl tracking-[0.06em] text-primary">
+                      {o.order_number}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(o.created_at).toLocaleString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2.5 py-1 text-xs capitalize ${orderStatusStyle[o.status] ?? ""}`}
+                  >
+                    {o.status}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-foreground">
+                  {o.guest_name} · {o.guest_phone}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {deliveryLabel[o.delivery]}
+                  {o.room_label ? ` · Room ${o.room_label}` : ""}
+                  {reference ? ` · Booking ${reference}` : ""}
+                </p>
+                <ul className="mt-3 grid gap-1 border-y border-border py-3 text-sm">
+                  {items.map((i, idx) => (
+                    <li key={idx} className="flex justify-between gap-3">
+                      <span>
+                        {i.name} × {i.quantity}
+                      </span>
+                      <span className="tabular-nums">{formatMoney(i.line_total_cents)}</span>
+                    </li>
+                  ))}
+                </ul>
+                {o.note && <p className="mt-2 text-xs text-foreground">Note: {o.note}</p>}
+                <p className="mt-3 flex items-baseline justify-between">
+                  <span className="text-xs text-muted-foreground">Total</span>
+                  <span className="font-display text-xl tabular-nums text-primary">
+                    {formatMoney(o.subtotal_cents)}
+                  </span>
+                </p>
+                {o.status !== "cancelled" && o.status !== "served" && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {orderFlow.map((step) => (
+                      <Button
+                        key={step.status}
+                        size="sm"
+                        variant={o.status === step.status ? "default" : "outline"}
+                        disabled={mutation.isPending || o.status === step.status}
+                        onClick={() => mutation.mutate({ orderId: o.id, status: step.status })}
+                      >
+                        {step.label}
+                      </Button>
+                    ))}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      disabled={mutation.isPending}
+                      onClick={() => {
+                        if (window.confirm(`Cancel order ${o.order_number}?`))
+                          mutation.mutate({ orderId: o.id, status: "cancelled" });
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+                {o.status !== "cancelled" && (
+                  <div className="mt-3 flex items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">Bill:</span>
+                    {(["unbilled", "billed", "paid"] as const).map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        disabled={mutation.isPending}
+                        onClick={() => mutation.mutate({ orderId: o.id, billStatus: b })}
+                        className={`h-8 border px-3 capitalize transition-colors ${o.bill_status === b ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-resort-gold"}`}
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+      {notice && (
+        <p role="status" className="mt-4 text-xs text-muted-foreground">
+          {notice}
+        </p>
+      )}
+    </section>
+  );
+}
+
+const menuCategories = [
+  { key: "food", label: "Food" },
+  { key: "drinks", label: "Drinks" },
+  { key: "service", label: "Services" },
+  { key: "activity", label: "Activities" },
+] as const;
+
+function MenuAdmin({ items, panelKey }: { items: any[]; panelKey: AdminPanelKey }) {
+  const { mutation, notice } = useAdminMutation(
+    panelKey,
+    (data: Parameters<typeof saveMenuItem>[0]["data"]) => saveMenuItem({ data }),
+  );
+  const [category, setCategory] = useState<(typeof menuCategories)[number]["key"]>("food");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await mutation.mutateAsync({
+      category,
+      name,
+      description,
+      price: Number(price),
+      imageUrl,
+      isAvailable: true,
+    });
+    setName("");
+    setDescription("");
+    setPrice("");
+    setImageUrl("");
+  }
+  return (
+    <section className="grid gap-8 border-y border-border bg-background p-5 sm:p-7 lg:grid-cols-[1.2fr_0.8fr]">
+      <div>
+        <Eyebrow>Guests order these from the Order page</Eyebrow>
+        <h2 className="mt-3 font-display text-3xl text-primary">Menu</h2>
+        {menuCategories.map((c) => {
+          const list = items.filter((i) => i.category === c.key);
+          if (list.length === 0) return null;
+          return (
+            <div key={c.key} className="mt-6">
+              <h3 className="text-sm font-medium text-primary">{c.label}</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Price (৳)</TableHead>
+                    <TableHead>On menu</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {list.map((item) => (
+                    <MenuRow key={item.id} item={item} onSave={(next) => mutation.mutate(next)} />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          );
+        })}
+        {notice && (
+          <p role="status" className="mt-4 text-xs text-muted-foreground">
+            {notice}
+          </p>
+        )}
+      </div>
+      <form
+        onSubmit={submit}
+        className="grid content-start gap-4 border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0"
+      >
+        <h3 className="font-display text-2xl text-primary">Add a menu item</h3>
+        <div className="grid gap-2">
+          <Label htmlFor="menu-category">Category</Label>
+          <Select
+            value={category}
+            onValueChange={(v: (typeof menuCategories)[number]["key"]) => setCategory(v)}
+          >
+            <SelectTrigger id="menu-category">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {menuCategories.map((c) => (
+                <SelectItem key={c.key} value={c.key}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="menu-name">Name</Label>
+          <Input
+            id="menu-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            maxLength={80}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="menu-description">Short description</Label>
+          <Input
+            id="menu-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={300}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="menu-price">Price (৳)</Label>
+          <Input
+            id="menu-price"
+            type="number"
+            min="0"
+            step="1"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="menu-image">Photo link (optional)</Label>
+          <Input
+            id="menu-image"
+            type="url"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="https://"
+          />
+        </div>
+        <Button type="submit" disabled={mutation.isPending}>
+          <Plus size={15} />
+          Add item
+        </Button>
+      </form>
+    </section>
+  );
+}
+
+function MenuRow({
+  item,
+  onSave,
+}: {
+  item: any;
+  onSave: (next: Parameters<typeof saveMenuItem>[0]["data"]) => void;
+}) {
+  const [price, setPrice] = useState(String(item.price_cents / 100));
+  const base = {
+    id: item.id,
+    category: item.category,
+    name: item.name,
+    description: item.description,
+    imageUrl: item.image_url ?? "",
+  };
+  return (
+    <TableRow>
+      <TableCell className="min-w-44">
+        <span className="block font-medium text-primary">{item.name}</span>
+        <span className="line-clamp-1 text-xs text-muted-foreground">{item.description}</span>
+      </TableCell>
+      <TableCell>
+        <form
+          className="flex items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSave({ ...base, price: Number(price), isAvailable: item.is_available });
+          }}
+        >
+          <Input
+            aria-label={`Price for ${item.name}`}
+            type="number"
+            min="0"
+            step="1"
+            className="h-8 w-24"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+          />
+          <Button size="sm" variant="outline" type="submit">
+            Save
+          </Button>
+        </form>
+      </TableCell>
+      <TableCell>
+        <Switch
+          checked={item.is_available}
+          aria-label={`Show ${item.name} on the menu`}
+          onCheckedChange={(checked) =>
+            onSave({ ...base, price: item.price_cents / 100, isAvailable: checked })
+          }
+        />
+      </TableCell>
+    </TableRow>
   );
 }

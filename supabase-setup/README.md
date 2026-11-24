@@ -17,3 +17,5 @@
 6. Open /admin and add room types and rooms.
 7. For booking without an account and guest reviews, also run `guest-booking-and-reviews.sql`
    (already applied on the current project).
+8. For in-stay food and service orders (pending bills for the POS), run `in-stay-orders.sql`
+   (already applied on the current project).

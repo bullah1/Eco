@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      menu_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          image_url: string
+          is_available: boolean
+          name: string
+          price_cents: number
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          is_available?: boolean
+          name: string
+          price_cents: number
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          is_available?: boolean
+          name?: string
+          price_cents?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -376,6 +412,110 @@ export type Database = {
           },
         ]
       }
+      service_order_items: {
+        Row: {
+          id: string
+          line_total_cents: number
+          menu_item_id: string | null
+          name: string
+          order_id: string
+          quantity: number
+          unit_price_cents: number
+        }
+        Insert: {
+          id?: string
+          line_total_cents: number
+          menu_item_id?: string | null
+          name: string
+          order_id: string
+          quantity: number
+          unit_price_cents: number
+        }
+        Update: {
+          id?: string
+          line_total_cents?: number
+          menu_item_id?: string | null
+          name?: string
+          order_id?: string
+          quantity?: number
+          unit_price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_order_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_orders: {
+        Row: {
+          bill_status: string
+          created_at: string
+          delivery: string
+          guest_name: string
+          guest_phone: string
+          id: string
+          note: string
+          order_number: string
+          reservation_id: string | null
+          room_label: string
+          status: string
+          subtotal_cents: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          bill_status?: string
+          created_at?: string
+          delivery?: string
+          guest_name: string
+          guest_phone: string
+          id?: string
+          note?: string
+          order_number?: string
+          reservation_id?: string | null
+          room_label?: string
+          status?: string
+          subtotal_cents?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          bill_status?: string
+          created_at?: string
+          delivery?: string
+          guest_name?: string
+          guest_phone?: string
+          id?: string
+          note?: string
+          order_number?: string
+          reservation_id?: string | null
+          room_label?: string
+          status?: string
+          subtotal_cents?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_orders_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -402,6 +542,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_order: {
+        Args: { p_order_number: string; p_phone: string }
+        Returns: {
+          created_at: string
+          delivery: string
+          items: Json
+          order_number: string
+          room_label: string
+          status: string
+          subtotal_cents: number
+        }[]
+      }
+      place_order: {
+        Args: {
+          p_delivery: string
+          p_items: Json
+          p_name: string
+          p_note: string
+          p_phone: string
+          p_reference: string
+          p_room: string
+        }
+        Returns: {
+          order_number: string
+          subtotal_cents: number
+        }[]
+      }
       create_booking: {
         Args: {
           p_addons: Json

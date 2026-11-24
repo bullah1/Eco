@@ -86,7 +86,7 @@ export const getAdminOverview = createServerFn({ method: "GET" })
       _role: "admin",
     });
     if (roleError || !isAdmin) throw new Error("Administrator access is required.");
-    const [rooms, units, reservations, guests, gallery, content, addons, reviews] =
+    const [rooms, units, reservations, guests, gallery, content, addons, reviews, orders, menu] =
       await Promise.all([
         context.supabase.from("room_types").select("*").order("sort_order"),
         context.supabase.from("room_units").select("id, name, is_active, room_type_id"),
@@ -107,6 +107,14 @@ export const getAdminOverview = createServerFn({ method: "GET" })
           .from("guest_reviews")
           .select("*")
           .order("created_at", { ascending: false }),
+        context.supabase
+          .from("service_orders")
+          .select(
+            "*, service_order_items(name, quantity, unit_price_cents, line_total_cents), reservations(booking_reference)",
+          )
+          .order("created_at", { ascending: false })
+          .limit(200),
+        context.supabase.from("menu_items").select("*").order("sort_order"),
       ]);
     if (
       [
@@ -118,6 +126,8 @@ export const getAdminOverview = createServerFn({ method: "GET" })
         content.error,
         addons.error,
         reviews.error,
+        orders.error,
+        menu.error,
       ].some(Boolean)
     )
       throw new Error("We couldn't load resort management details.");
@@ -130,6 +140,8 @@ export const getAdminOverview = createServerFn({ method: "GET" })
       content: content.data ?? [],
       addons: addons.data ?? [],
       reviews: reviews.data ?? [],
+      orders: orders.data ?? [],
+      menu: menu.data ?? [],
     };
   });
 
@@ -474,5 +486,86 @@ export const moderateReview = createServerFn({ method: "POST" })
             .eq("id", data.reviewId);
     const { error } = await query;
     if (error) throw new Error("We couldn't update that review.");
+    return { success: true };
+  });
+
+const orderStatuses = ["pending", "confirmed", "preparing", "served", "cancelled"] as const;
+const billStatuses = ["unbilled", "billed", "paid"] as const;
+
+export const updateOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { orderId: string; status?: string; billStatus?: string }) => {
+    const status = input?.status;
+    const billStatus = input?.billStatus;
+    if (status && !orderStatuses.includes(status as never))
+      throw new Error("Unknown order status.");
+    if (billStatus && !billStatuses.includes(billStatus as never))
+      throw new Error("Unknown bill status.");
+    return { orderId: String(input.orderId), status, billStatus };
+  })
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Administrator access is required.");
+    const values: { status?: string; bill_status?: string } = {};
+    if (data.status) values.status = data.status;
+    if (data.billStatus) values.bill_status = data.billStatus;
+    const { error } = await context.supabase
+      .from("service_orders")
+      .update(values)
+      .eq("id", data.orderId);
+    if (error) throw new Error("We couldn't update that order.");
+    return { success: true };
+  });
+
+type MenuItemInput = {
+  id?: string;
+  category: "food" | "drinks" | "service" | "activity";
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  isAvailable: boolean;
+};
+
+export const saveMenuItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: MenuItemInput) => {
+    const name = String(input?.name ?? "").trim();
+    if (!name || name.length > 80) throw new Error("Give the item a name under 80 characters.");
+    if (!["food", "drinks", "service", "activity"].includes(input.category))
+      throw new Error("Choose a category.");
+    if (!Number.isFinite(input.price) || input.price < 0)
+      throw new Error("Enter a price of 0 or more.");
+    return {
+      ...input,
+      name,
+      description: String(input.description ?? "")
+        .trim()
+        .slice(0, 300),
+      imageUrl: cleanUrl(String(input.imageUrl ?? "")),
+    };
+  })
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Administrator access is required.");
+    const values = {
+      category: data.category,
+      name: data.name,
+      description: data.description,
+      price_cents: Math.round(data.price * 100),
+      image_url: data.imageUrl,
+      is_available: data.isAvailable,
+    };
+    const query = data.id
+      ? context.supabase.from("menu_items").update(values).eq("id", data.id)
+      : context.supabase.from("menu_items").insert(values);
+    const { error } = await query;
+    if (error) throw new Error("We couldn't save that menu item.");
     return { success: true };
   });

@@ -1,6 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowDownRight, ArrowRight, LogOut, MapPin, Menu, Phone, X } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowRight,
+  BedDouble,
+  CalendarCheck,
+  CalendarDays,
+  House,
+  LogOut,
+  MapPin,
+  Menu,
+  Phone,
+  ShoppingBag,
+  X,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -10,10 +23,11 @@ import { useCurrentUser } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { resortContact } from "@/lib/resort-content";
 import { ContactFloat } from "@/components/trust";
+import { useCart } from "@/lib/cart";
 
 type NavItem = {
   label: string;
-  to: "/" | "/stays" | "/experiences" | "/gallery" | "/contact";
+  to: "/" | "/stays" | "/experiences" | "/gallery" | "/contact" | "/order";
   hash?: string;
 };
 
@@ -22,6 +36,7 @@ const navigation: NavItem[] = [
   { label: "Rooms", to: "/stays" },
   { label: "Dining", to: "/experiences", hash: "dining" },
   { label: "Activities", to: "/experiences" },
+  { label: "Order", to: "/order" },
   { label: "Gallery", to: "/gallery" },
   { label: "Contact", to: "/contact" },
 ];
@@ -223,48 +238,73 @@ export function ResortHeader() {
   );
 }
 
-function MobileBookBar() {
+function MobileTabBar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const onHome = pathname === "/";
-  const [pastHero, setPastHero] = useState(false);
-  useEffect(() => {
-    if (!onHome) return;
-    // On the home page the hero already has a booking form, so the bar waits until it is passed.
-    const onScroll = () => {
-      const form = document.querySelector(".sagara-booking-bar");
-      setPastHero(
-        form ? form.getBoundingClientRect().bottom < 0 : window.scrollY > window.innerHeight,
-      );
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [onHome]);
+  const { count } = useCart();
   if (pathname.startsWith("/booking") || pathname.startsWith("/admin")) return null;
-  const show = !onHome || pastHero;
   const roomSlug = pathname.match(/^\/rooms\/([a-z0-9-]+)/)?.[1];
+  const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
+  const tab = (active: boolean) =>
+    `relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-[11px] transition-colors ${active ? "text-primary" : "text-muted-foreground"}`;
+  const indicator = (active: boolean) =>
+    active ? (
+      <span className="absolute inset-x-5 top-0 h-0.5 bg-resort-gold" aria-hidden="true" />
+    ) : null;
 
   return (
-    <div
-      aria-hidden={!show}
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-border bg-resort-white/95 p-3 backdrop-blur transition-transform duration-300 lg:hidden ${show ? "translate-y-0" : "translate-y-full"}`}
+    <nav
+      aria-label="Quick navigation"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-resort-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
     >
-      <Button
-        tabIndex={show ? 0 : -1}
-        className="h-12 w-full rounded-none bg-resort-gold text-resort-wood hover:bg-primary hover:text-primary-foreground"
-        asChild
-      >
-        {roomSlug ? (
-          <Link to="/booking" search={{ room: roomSlug, rooms: 1 }}>
-            Book this room <ArrowRight size={15} />
-          </Link>
-        ) : (
-          <Link to="/booking">
-            Book now <ArrowRight size={15} />
-          </Link>
-        )}
-      </Button>
-    </div>
+      <div className="mx-auto flex max-w-md items-stretch">
+        <Link
+          to="/"
+          className={tab(isActive("/"))}
+          aria-current={isActive("/") ? "page" : undefined}
+        >
+          {indicator(isActive("/"))}
+          <House size={21} strokeWidth={1.6} />
+          Home
+        </Link>
+        <Link to="/stays" className={tab(isActive("/stays") || isActive("/rooms"))}>
+          {indicator(isActive("/stays") || isActive("/rooms"))}
+          <BedDouble size={21} strokeWidth={1.6} />
+          Rooms
+        </Link>
+        <Link
+          to="/booking"
+          search={roomSlug ? { room: roomSlug, rooms: 1 } : {}}
+          className="flex flex-1 flex-col items-center justify-end gap-1 pb-1.5 text-[11px] font-medium text-primary"
+          aria-label={roomSlug ? "Book this room" : "Book a room"}
+        >
+          <span className="-mt-5 grid size-12 place-items-center rounded-full bg-resort-gold text-resort-wood shadow-[0_6px_16px_color-mix(in_oklab,var(--resort-wood)_25%,transparent)] ring-4 ring-resort-white">
+            <CalendarCheck size={21} strokeWidth={1.8} />
+          </span>
+          Book
+        </Link>
+        <Link
+          to="/order"
+          className={tab(isActive("/order"))}
+          aria-current={isActive("/order") ? "page" : undefined}
+        >
+          {indicator(isActive("/order"))}
+          <span className="relative">
+            <ShoppingBag size={21} strokeWidth={1.6} />
+            {count > 0 && (
+              <span className="absolute -right-2.5 -top-1.5 grid min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[10px] font-medium leading-[18px] text-primary-foreground tabular-nums">
+                {count}
+              </span>
+            )}
+          </span>
+          Order
+        </Link>
+        <Link to="/my-stays" className={tab(isActive("/my-stays") || isActive("/account"))}>
+          {indicator(isActive("/my-stays") || isActive("/account"))}
+          <CalendarDays size={21} strokeWidth={1.6} />
+          My stays
+        </Link>
+      </div>
+    </nav>
   );
 }
 
@@ -295,6 +335,9 @@ export function ResortFooter() {
             </Link>
             <Link to="/experiences" className="transition-colors hover:text-resort-gold">
               Activities
+            </Link>
+            <Link to="/order" className="transition-colors hover:text-resort-gold">
+              Order food and services
             </Link>
             <Link to="/gallery" className="transition-colors hover:text-resort-gold">
               Gallery
@@ -361,7 +404,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
       <ResortHeader />
       <main>{children}</main>
       <ResortFooter />
-      <MobileBookBar />
+      <MobileTabBar />
       <ContactFloat />
     </>
   );
