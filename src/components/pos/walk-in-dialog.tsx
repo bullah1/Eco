@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   addDays,
   nights,
+  phoneOk,
   posError,
   resortToday,
   rpc,
@@ -27,9 +28,12 @@ import {
   type PosUnit,
 } from "@/lib/pos";
 
-const phoneOk = (v: string) => /^\+?[0-9 -]{7,20}$/.test(v.trim());
-
-export type BookingStart = { checkIn?: string | undefined; unitId?: string | undefined };
+export type BookingStart = {
+  checkIn?: string | undefined;
+  unitId?: string | undefined;
+  /** Book for a customer whose bill is already open. */
+  guest?: { name: string; phone: string; email: string } | undefined;
+};
 
 /** New booking from the front desk. Arriving today can be checked in straight away. */
 export function BookingDialog({
@@ -56,17 +60,20 @@ export function BookingDialog({
 
   const startIn = start?.checkIn && start.checkIn >= today ? start.checkIn : today;
   const startUnit = start?.unitId;
+  const gName = start?.guest?.name ?? "";
+  const gPhone = start?.guest?.phone ?? "";
+  const gEmail = start?.guest?.email ?? "";
   useEffect(() => {
     if (!open) return;
-    setName("");
-    setPhone("");
-    setEmail("");
+    setName(gName);
+    setPhone(gPhone);
+    setEmail(gEmail);
     setNote("");
     setCheckIn(startIn);
     setCheckOut(addDays(startIn, 1));
     setPicked(startUnit ? { [startUnit]: 0 } : {});
     setProblem("");
-  }, [open, startIn, startUnit]);
+  }, [open, startIn, startUnit, gName, gPhone, gEmail]);
 
   const arrivingToday = checkIn === today;
   const n = nights(checkIn, checkOut);

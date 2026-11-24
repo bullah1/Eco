@@ -55,6 +55,15 @@ const timeFmt = new Intl.DateTimeFormat("en-GB", {
 });
 export const shortDateTime = (iso: string) => timeFmt.format(new Date(iso));
 
+/** Same rule as pos_phone_key in the database: "+880 1712-345678" → "01712345678". */
+export function phoneKey(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  if (/^8801\d{9}$/.test(d)) return `0${d.slice(3)}`;
+  if (/^1\d{9}$/.test(d)) return `0${d}`;
+  return d;
+}
+export const phoneOk = (v: string) => /^\+?[0-9 -]{7,20}$/.test(v.trim());
+
 /** The message a pos_* function raised, or a plain fallback. */
 export function posError(error: unknown): string {
   if (error && typeof error === "object" && "message" in error) {

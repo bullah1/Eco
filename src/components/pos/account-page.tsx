@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  BedDouble,
   CalendarClock,
   CircleCheck,
   LoaderCircle,
@@ -39,11 +40,13 @@ import {
   shortDateTime,
   taka,
   useAccount,
+  useBoardData,
   usePosAction,
   type ChargeLine,
   type PaymentMethod,
 } from "@/lib/pos";
 import { AddChargeDialog } from "./add-charge-dialog";
+import { BookingDialog } from "./walk-in-dialog";
 import { LoadState, Panel, usePos } from "./pos-shell";
 
 const sourceLabel: Record<ChargeLine["source"], string> = {
@@ -76,6 +79,8 @@ export function AccountPage({ id }: { id: string }) {
     label: string;
   } | null>(null);
   const [confirmOut, setConfirmOut] = useState(false);
+  const [booking, setBooking] = useState(false);
+  const board = useBoardData(booking);
 
   const chargeOrder = usePosAction((orderId: string) =>
     rpc(supabase.rpc("pos_charge_order", { p_order_id: orderId, p_account: id })),
@@ -88,7 +93,7 @@ export function AccountPage({ id }: { id: string }) {
       <Panel>
         <p className="text-sm">This bill doesn't exist or you can't see it.</p>
         <Link to="/pos/guests" className="mt-2 inline-block text-sm text-pos-teal underline">
-          Back to guests
+          Back to customers
         </Link>
       </Panel>
     );
@@ -104,6 +109,9 @@ export function AccountPage({ id }: { id: string }) {
   const leavingEarly = inHouse.some(
     (r) => r.check_out > (today > addDays(r.check_in, 1) ? today : addDays(r.check_in, 1)),
   );
+  const bookingGuest = {
+    guest: { name: account.guest_name, phone: account.guest_phone, email: account.guest_email },
+  };
   const removedCount =
     charges.filter((c) => c.voided_at).length + payments.filter((p) => p.voided_at).length;
 
@@ -129,7 +137,7 @@ export function AccountPage({ id }: { id: string }) {
           to="/pos/guests"
           className="mb-3 inline-flex items-center gap-1 text-sm text-pos-teal hover:underline"
         >
-          <ArrowLeft size={15} /> Guests
+          <ArrowLeft size={15} /> Customers
         </Link>
         <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -140,7 +148,7 @@ export function AccountPage({ id }: { id: string }) {
               </span>
               {open ? (
                 <span className="rounded-full bg-pos-teal-soft px-2.5 py-0.5 text-xs font-medium text-[#1f5e5c]">
-                  Staying
+                  {rooms.length ? "Staying" : "Open bill"}
                 </span>
               ) : (
                 <span className="rounded-full bg-[#ecebe6] px-2.5 py-0.5 text-xs font-medium text-[#45443f]">
@@ -416,15 +424,30 @@ export function AccountPage({ id }: { id: string }) {
 
             {open && (
               <Panel title="Stay">
-                <StayControls accountId={id} lastOut={lastOut} leavingEarly={leavingEarly} />
+                {rooms.length > 0 && (
+                  <StayControls accountId={id} lastOut={lastOut} leavingEarly={leavingEarly} />
+                )}
+                {rooms.length === 0 && (
+                  <p className="text-sm text-pos-muted">
+                    No room yet. Food and services can still go on this bill.
+                  </p>
+                )}
+                <Button
+                  variant="outline"
+                  className="mt-3 h-11 w-full gap-2"
+                  onClick={() => setBooking(true)}
+                >
+                  <BedDouble size={16} /> {rooms.length ? "Add another room" : "Give a room"}
+                </Button>
                 <div className="mt-4 border-t border-pos-line pt-4">
                   {blockers.length > 0 ? (
                     <p className="mb-2 text-xs text-pos-muted">
-                      Before check-out: {blockers.join(" · ")}
+                      {rooms.length ? "Before check-out" : "Before closing"}: {blockers.join(" · ")}
                     </p>
                   ) : (
                     <p className="mb-2 flex items-center gap-1.5 text-xs text-pos-teal">
-                      <CircleCheck size={14} /> All paid. Ready to check out
+                      <CircleCheck size={14} /> All paid. Ready to{" "}
+                      {rooms.length ? "check out" : "close the bill"}
                     </p>
                   )}
                   <Button
@@ -432,7 +455,7 @@ export function AccountPage({ id }: { id: string }) {
                     disabled={blockers.length > 0}
                     className="h-12 w-full gap-2 bg-pos-ocean text-white hover:bg-pos-ocean/90"
                   >
-                    <LogOut size={16} /> Check out
+                    <LogOut size={16} /> {rooms.length ? "Check out" : "Close the bill"}
                   </Button>
                 </div>
               </Panel>
@@ -442,6 +465,14 @@ export function AccountPage({ id }: { id: string }) {
       </div>
 
       <PrintableBill data={q.data} />
+      {open && (
+        <BookingDialog
+          open={booking}
+          onOpenChange={setBooking}
+          units={board.data?.units ?? []}
+          start={bookingGuest}
+        />
+      )}
 
       {open && <AddChargeDialog accountId={id} open={adding} onOpenChange={setAdding} />}
       <VoidDialog target={voiding} onClose={() => setVoiding(null)} />
@@ -750,10 +781,14 @@ function CheckOutDialog({
     <Dialog open={open} onOpenChange={(o) => !run.isPending && onOpenChange(o)}>
       <DialogContent className="font-sans sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Check out {guest}?</DialogTitle>
+          <DialogTitle>
+            {rooms.length ? `Check out ${guest}?` : `Close ${guest}'s bill?`}
+          </DialogTitle>
           <DialogDescription>
-            The bill closes and {rooms.join(", ")} {rooms.length === 1 ? "is" : "are"} marked for
-            cleaning. A closed bill can't be changed.
+            {rooms.length
+              ? `The bill closes and ${rooms.join(", ")} ${rooms.length === 1 ? "is" : "are"} marked for cleaning. `
+              : "The bill closes. "}
+            A closed bill can't be changed.
           </DialogDescription>
         </DialogHeader>
         <div className="flex gap-2">
@@ -766,14 +801,20 @@ function CheckOutDialog({
             onClick={() =>
               run.mutate(undefined, {
                 onSuccess: () => {
-                  toast.success(`${guest} checked out`);
+                  toast.success(rooms.length ? `${guest} checked out` : `${guest}'s bill closed`);
                   onOpenChange(false);
                 },
                 onError: (e) => toast.error(posError(e)),
               })
             }
           >
-            {run.isPending ? <LoaderCircle size={16} className="animate-spin" /> : "Check out"}
+            {run.isPending ? (
+              <LoaderCircle size={16} className="animate-spin" />
+            ) : rooms.length ? (
+              "Check out"
+            ) : (
+              "Close the bill"
+            )}
           </Button>
         </div>
       </DialogContent>

@@ -19,6 +19,7 @@ export type Ticket = {
   table_id: string | null;
   label: string;
   note: string;
+  guest_phone: string;
   status: "open" | "paid" | "charged" | "cancelled";
   opened_at: string;
   items: TicketItem[];
@@ -45,7 +46,7 @@ export function minutesSince(iso: string, now: number = Date.now()) {
 }
 
 export function ticketPlace(
-  t: Pick<Ticket, "table_id" | "label" | "ticket_no">,
+  t: Pick<Ticket, "table_id" | "label" | "ticket_no"> & { guest_phone?: string },
   tables: RestTable[],
 ) {
   const table = t.table_id ? tables.find((x) => x.id === t.table_id) : undefined;
@@ -53,7 +54,7 @@ export function ticketPlace(
     ? t.label
       ? `${table.name} · ${t.label}`
       : table.name
-    : t.label || `Counter ${t.ticket_no}`;
+    : t.label || t.guest_phone || `Counter ${t.ticket_no}`;
 }
 
 /** Menu grouped by category in menu order, optionally filtered by a search word. */
@@ -83,7 +84,7 @@ export function useRestaurant(enabled = true) {
         supabase
           .from("restaurant_tickets")
           .select(
-            "id, ticket_no, table_id, label, note, status, opened_at, restaurant_ticket_items(id, menu_item_id, name, unit_price_cents, quantity, sent_qty, created_at)",
+            "id, ticket_no, table_id, label, note, guest_phone, status, opened_at, restaurant_ticket_items(id, menu_item_id, name, unit_price_cents, quantity, sent_qty, created_at)",
           )
           .eq("status", "open")
           .order("opened_at"),

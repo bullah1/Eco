@@ -2,15 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  BedDouble,
   ChefHat,
+  CircleCheck,
   LoaderCircle,
   Minus,
   MoreHorizontal,
   Plus,
   Printer,
   Search,
+  Smartphone,
   StickyNote,
+  UserRound,
   Wallet,
   X,
 } from "lucide-react";
@@ -36,12 +38,15 @@ import {
   changeDue,
   parseTaka,
   paymentMethods,
+  phoneKey,
+  phoneOk,
   posError,
   rpc,
   shortDateTime,
   taka,
   useAccounts,
   usePosAction,
+  type AccountRow,
   type PaymentMethod,
 } from "@/lib/pos";
 import {
@@ -55,6 +60,7 @@ import {
   type TicketItem,
 } from "@/lib/pos-restaurant";
 import { LoadState, PageTitle, usePos } from "./pos-shell";
+import { useOpenAccountByPhone } from "./customer-dialog";
 
 type Selection = { kind: "table"; tableId: string } | { kind: "ticket"; id: string } | null;
 type PrintDoc =
@@ -270,7 +276,7 @@ export function RestaurantPage() {
       <div className="print:hidden">
         <PageTitle
           title="Restaurant"
-          sub="Pick a table, tap dishes, send to the kitchen. Then take payment or put it on the guest's room bill."
+          sub="Pick a table or start an order by mobile number. Then take payment or put it on the customer's bill."
           actions={
             <label className="flex items-center gap-2 text-xs text-pos-muted">
               <input
@@ -329,7 +335,7 @@ export function RestaurantPage() {
                 })}
               </div>
               <div className="mt-4 border-t border-pos-line pt-3">
-                <p className="mb-2 px-1 text-xs font-medium text-pos-muted">Counter and takeaway</p>
+                <p className="mb-2 px-1 text-xs font-medium text-pos-muted">Without a table</p>
                 <ul className="grid gap-1.5">
                   {counterTickets.map((t) => (
                     <li key={t.id}>
@@ -353,7 +359,7 @@ export function RestaurantPage() {
                   className="mt-2 h-10 w-full gap-1.5"
                   onClick={() => setDialog("counter")}
                 >
-                  <Plus size={15} /> Counter order
+                  <Smartphone size={15} /> Order by mobile
                 </Button>
               </div>
             </section>
@@ -395,7 +401,7 @@ export function RestaurantPage() {
               </div>
               {!sel && (
                 <p className="mt-3 rounded-lg bg-pos-sand px-3 py-2 text-sm text-pos-ink">
-                  Choose a table or start a counter order, then tap dishes.
+                  Choose a table or start an order by mobile number, then tap dishes.
                 </p>
               )}
               {menu.length === 0 ? (
@@ -452,7 +458,7 @@ export function RestaurantPage() {
                       <h2 className="truncate text-lg font-semibold">{place || "New order"}</h2>
                       <p className="text-xs text-pos-muted">
                         {ticket
-                          ? `${ticket.ticket_no} · since ${shortDateTime(ticket.opened_at)}`
+                          ? `${ticket.ticket_no}${ticket.guest_phone ? ` · ${ticket.guest_phone}` : ""} · since ${shortDateTime(ticket.opened_at)}`
                           : "Tap a dish to start"}
                       </p>
                       {ticket?.note && (
@@ -586,7 +592,7 @@ export function RestaurantPage() {
                         disabled={!ticket || total <= 0}
                         className="h-12 gap-1.5 bg-pos-gold font-semibold text-pos-ocean hover:bg-pos-gold/85"
                       >
-                        <BedDouble size={16} /> To room bill
+                        <UserRound size={16} /> To customer bill
                       </Button>
                     </div>
                   </div>
@@ -787,95 +793,169 @@ function RoomDialog({
   const accounts = useAccounts(open);
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const openList = (accounts.data ?? []).filter((a) => a.status === "open");
+
   useEffect(() => {
-    if (open) {
-      setSearch("");
-      setPicked(null);
-    }
-  }, [open]);
-  const list = (accounts.data ?? [])
-    .filter((a) => a.status === "open")
-    .filter((a) => {
-      const s = search.trim().toLowerCase();
-      return (
-        !s ||
-        a.guest_name.toLowerCase().includes(s) ||
-        a.rooms.some((r) => r.toLowerCase().includes(s))
-      );
-    });
+    if (!open) return;
+    setSearch(ticket.guest_phone);
+    setNewName(ticket.label);
+    setPicked(null);
+  }, [open, ticket.guest_phone, ticket.label]);
+  // The order was started with a mobile number: pick that customer's bill.
+  const linked = ticket.guest_phone
+    ? openList.find((a) => phoneKey(a.guest_phone) === phoneKey(ticket.guest_phone))
+    : undefined;
+  useEffect(() => {
+    if (open && linked && picked === null) setPicked(linked.id);
+  }, [open, linked, picked]);
+
+  const s = search.trim().toLowerCase();
+  const key = phoneKey(search);
+  const list = openList.filter(
+    (a) =>
+      !s ||
+      a.guest_name.toLowerCase().includes(s) ||
+      a.account_no.toLowerCase() === s ||
+      (key.length >= 4 && phoneKey(a.guest_phone).includes(key)) ||
+      a.rooms.some((r) => r.toLowerCase().includes(s)),
+  );
+  const newCustomer = phoneOk(search) && key.length >= 11 && list.length === 0;
+
   const charge = usePosAction(() =>
     rpc(supabase.rpc("pos_ticket_charge_room", { p_ticket: ticket.id, p_account: picked! })),
   );
+  const chargeNew = usePosAction(() =>
+    rpc(
+      supabase.rpc("pos_ticket_charge_phone", {
+        p_ticket: ticket.id,
+        p_phone: search.trim(),
+        p_name: newName.trim(),
+      }),
+    ),
+  );
+  const busy = charge.isPending || chargeNew.isPending;
   const chosen = list.find((a) => a.id === picked);
+  const who = (a: AccountRow) => (a.rooms.length ? a.rooms.join(", ") : a.guest_name);
+  const done = (text: string) => {
+    toast.success(text);
+    onClose();
+    onDone();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && !charge.isPending && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="flex max-h-[90svh] flex-col font-sans sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Put {taka(total)} on a room bill</DialogTitle>
+          <DialogTitle>Put {taka(total)} on the customer's bill</DialogTitle>
           <DialogDescription>
-            The guest pays it with everything else at check-out.
+            Find the customer by mobile number. They pay it with everything else at the end.
           </DialogDescription>
         </DialogHeader>
         <label className="flex h-11 items-center gap-2 rounded-lg border border-pos-line px-3 text-pos-muted">
           <Search size={16} />
           <input
-            aria-label="Search room or guest"
-            placeholder="Room or guest name"
+            aria-label="Mobile number, name or room"
+            placeholder="Mobile number, name or room"
+            inputMode="search"
+            autoFocus
             className="min-w-0 flex-1 bg-transparent text-base text-pos-ink outline-none sm:text-sm"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPicked(null);
+            }}
           />
         </label>
-        <ul className="min-h-0 flex-1 divide-y divide-pos-line overflow-y-auto rounded-lg border border-pos-line">
-          {accounts.isLoading && <li className="p-3 text-sm text-pos-muted">Loading</li>}
-          {accounts.data && list.length === 0 && (
-            <li className="p-3 text-sm text-pos-muted">No checked-in guest matches</li>
-          )}
-          {list.map((a) => (
-            <li key={a.id}>
-              <button
-                type="button"
-                aria-pressed={picked === a.id}
-                onClick={() => setPicked(a.id)}
-                className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left ${picked === a.id ? "bg-pos-ocean text-white" : "hover:bg-pos-ground"}`}
-              >
-                <span className="min-w-0">
-                  <span className="block font-semibold">{a.rooms.join(", ")}</span>
-                  <span
-                    className={`block truncate text-xs ${picked === a.id ? "text-white/75" : "text-pos-muted"}`}
+
+        {newCustomer ? (
+          <form
+            className="grid gap-2 rounded-lg border border-pos-line p-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              chargeNew.mutate(undefined, {
+                onSuccess: () => done(`${taka(total)} added to a new bill for ${newName.trim()}`),
+                onError: (err) => toast.error(posError(err)),
+              });
+            }}
+          >
+            <p className="text-sm">
+              No open bill for <span className="font-medium">{search.trim()}</span>. Open one now:
+            </p>
+            <Label htmlFor="nc-name" className="text-xs text-pos-muted">
+              Customer name
+            </Label>
+            <Input
+              id="nc-name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="h-11 text-base sm:text-sm"
+              autoComplete="off"
+            />
+            <Button
+              type="submit"
+              disabled={busy || newName.trim().length < 2}
+              className="h-12 bg-pos-ocean font-semibold text-white hover:bg-pos-ocean/90"
+            >
+              {chargeNew.isPending ? (
+                <LoaderCircle size={16} className="animate-spin" />
+              ) : (
+                "Open bill and add the order"
+              )}
+            </Button>
+          </form>
+        ) : (
+          <>
+            <ul className="min-h-0 flex-1 divide-y divide-pos-line overflow-y-auto rounded-lg border border-pos-line">
+              {accounts.isLoading && <li className="p-3 text-sm text-pos-muted">Loading</li>}
+              {accounts.data && list.length === 0 && (
+                <li className="p-3 text-sm text-pos-muted">
+                  No open bill matches. Type the full mobile number to open a new one.
+                </li>
+              )}
+              {list.map((a) => (
+                <li key={a.id}>
+                  <button
+                    type="button"
+                    aria-pressed={picked === a.id}
+                    onClick={() => setPicked(a.id)}
+                    className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left ${picked === a.id ? "bg-pos-ocean text-white" : "hover:bg-pos-ground"}`}
                   >
-                    {a.guest_name}
-                  </span>
-                </span>
-                <span className="text-xs tabular-nums">{a.account_no}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <Button
-          className="h-12 bg-pos-ocean font-semibold text-white hover:bg-pos-ocean/90"
-          disabled={!picked || charge.isPending}
-          onClick={() =>
-            charge.mutate(undefined, {
-              onSuccess: () => {
-                toast.success(
-                  `${taka(total)} added to ${chosen?.rooms.join(", ")} (${chosen?.guest_name})`,
-                );
-                onClose();
-                onDone();
-              },
-              onError: (e) => toast.error(posError(e)),
-            })
-          }
-        >
-          {charge.isPending ? (
-            <LoaderCircle size={16} className="animate-spin" />
-          ) : chosen ? (
-            `Add to ${chosen.rooms.join(", ")}`
-          ) : (
-            "Choose a room"
-          )}
-        </Button>
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{a.guest_name}</span>
+                      <span
+                        className={`block truncate text-xs ${picked === a.id ? "text-white/75" : "text-pos-muted"}`}
+                      >
+                        {a.guest_phone || "No number"} ·{" "}
+                        {a.rooms.length ? a.rooms.join(", ") : "No room"}
+                      </span>
+                    </span>
+                    <span className="text-xs tabular-nums">{a.account_no}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <Button
+              className="h-12 bg-pos-ocean font-semibold text-white hover:bg-pos-ocean/90"
+              disabled={!chosen || busy}
+              onClick={() =>
+                charge.mutate(undefined, {
+                  onSuccess: () =>
+                    done(`${taka(total)} added to ${chosen!.guest_name}'s bill (${who(chosen!)})`),
+                  onError: (e) => toast.error(posError(e)),
+                })
+              }
+            >
+              {charge.isPending ? (
+                <LoaderCircle size={16} className="animate-spin" />
+              ) : chosen ? (
+                `Add to ${chosen.guest_name}'s bill`
+              ) : (
+                "Choose a customer"
+              )}
+            </Button>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -1015,44 +1095,90 @@ function CounterDialog({
   onClose: () => void;
   onOpened: (id: string) => void;
 }) {
+  const [phone, setPhone] = useState("");
   const [label, setLabel] = useState("");
-  useEffect(() => setLabel(""), [open]);
+  useEffect(() => {
+    setPhone("");
+    setLabel("");
+  }, [open]);
+  const { match } = useOpenAccountByPhone(phone, open);
+  const badPhone = phone.trim() !== "" && !phoneOk(phone);
   const run = usePosAction(() =>
-    rpc(supabase.rpc("pos_open_ticket", { p_table: null, p_label: label })),
+    rpc(
+      supabase.rpc("pos_open_counter_ticket", {
+        p_label: label.trim() || match?.guest_name || "",
+        p_phone: phone.trim(),
+      }),
+    ),
   );
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="font-sans sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Counter or takeaway order</DialogTitle>
-          <DialogDescription>For someone not sitting at a table.</DialogDescription>
+          <DialogTitle>Order without a table</DialogTitle>
+          <DialogDescription>
+            Counter, takeaway or room service. With a mobile number the order can go on the
+            customer's bill.
+          </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-1.5">
-          <Label htmlFor="c-label">Name (optional)</Label>
-          <Input
-            id="c-label"
-            className="h-11 text-base"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. Takeaway Arif"
-            maxLength={60}
-          />
-        </div>
-        <Button
-          className="h-11 bg-pos-ocean text-white hover:bg-pos-ocean/90"
-          disabled={run.isPending}
-          onClick={() =>
+        <form
+          className="grid gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (badPhone) return;
             run.mutate(undefined, {
               onSuccess: (id) => {
                 onClose();
                 if (id) onOpened(id);
               },
-              onError: (e) => toast.error(posError(e)),
-            })
-          }
+              onError: (err) => toast.error(posError(err)),
+            });
+          }}
         >
-          Start order
-        </Button>
+          <div className="grid gap-1.5">
+            <Label htmlFor="c-phone">
+              Mobile number <span className="font-normal text-pos-muted">(optional)</span>
+            </Label>
+            <Input
+              id="c-phone"
+              type="tel"
+              inputMode="tel"
+              autoFocus
+              className="h-11 text-base"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="01712 345678"
+            />
+            {match && (
+              <p className="flex items-center gap-1.5 text-xs text-pos-teal">
+                <CircleCheck size={13} /> {match.guest_name}
+                {match.rooms.length > 0 && ` · ${match.rooms.join(", ")}`} · bill {match.account_no}
+              </p>
+            )}
+            {badPhone && <p className="text-xs text-red-700">Enter a valid mobile number</p>}
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="c-label">
+              Name <span className="font-normal text-pos-muted">(optional)</span>
+            </Label>
+            <Input
+              id="c-label"
+              className="h-11 text-base"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={match?.guest_name ?? "e.g. Takeaway Arif"}
+              maxLength={60}
+            />
+          </div>
+          <Button
+            type="submit"
+            className="h-11 bg-pos-ocean text-white hover:bg-pos-ocean/90"
+            disabled={run.isPending || badPhone}
+          >
+            {run.isPending && <LoaderCircle size={16} className="animate-spin" />}
+            Start order
+          </Button>
+        </form>
       </DialogContent>
     </Dialog>
   );

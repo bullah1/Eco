@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight, Search, UserPlus } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { CustomerDialog } from "./customer-dialog";
 
 import { shortDate, taka, useAccounts, type AccountRow } from "@/lib/pos";
 import { LoadState, PageTitle } from "./pos-shell";
@@ -11,6 +14,7 @@ export function GuestsPage() {
   const q = useAccounts();
   const [tab, setTab] = useState<Tab>("staying");
   const [search, setSearch] = useState("");
+  const [adding, setAdding] = useState(false);
 
   const all = q.data ?? [];
   const staying = all.filter((a) => a.status === "open");
@@ -43,12 +47,21 @@ export function GuestsPage() {
   return (
     <>
       <PageTitle
-        title="Guests"
-        sub="Every stay has one bill. Room, food and services add up there, and the guest pays once."
+        title="Customers"
+        sub="Every customer has one bill, found by mobile number. Rooms, food and services add up there, and they pay once."
+        actions={
+          <Button
+            onClick={() => setAdding(true)}
+            className="h-11 gap-2 bg-pos-gold px-5 font-semibold text-pos-ocean hover:bg-pos-gold/85"
+          >
+            <UserPlus size={18} /> New customer
+          </Button>
+        }
       />
+      <CustomerDialog open={adding} onOpenChange={setAdding} />
 
       <section aria-label="Totals" className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label="Staying now" value={`${counts.staying}`} />
+        <Tile label="Open bills" value={`${counts.staying}`} />
         <Tile label="Food on bills" value={taka(sum((a) => a.food_cents))} />
         <Tile label="Services on bills" value={taka(sum((a) => a.service_cents))} />
         <Tile
@@ -63,9 +76,9 @@ export function GuestsPage() {
           <div className="flex flex-wrap gap-1.5" role="tablist">
             {(
               [
-                ["staying", `Staying now · ${counts.staying}`],
+                ["staying", `Open bills · ${counts.staying}`],
                 ["balance", `Owes money · ${counts.balance}`],
-                ["left", `Checked out · ${counts.left}`],
+                ["left", `Closed · ${counts.left}`],
               ] as [Tab, string][]
             ).map(([t, label]) => (
               <button
@@ -83,7 +96,7 @@ export function GuestsPage() {
           <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-pos-line px-3 text-pos-muted sm:w-72">
             <Search size={16} />
             <input
-              aria-label="Search guests"
+              aria-label="Search customers"
               placeholder="Name, phone, room or bill no."
               className="min-w-0 flex-1 bg-transparent text-base text-pos-ink outline-none sm:text-sm"
               value={search}
@@ -97,9 +110,9 @@ export function GuestsPage() {
           {q.data && rows.length === 0 && (
             <p className="py-8 text-center text-sm text-pos-muted">
               {search
-                ? "No guest matches that search."
+                ? "No customer matches that search."
                 : tab === "staying"
-                  ? "No one is checked in. Check guests in from the front desk."
+                  ? "No open bills. Add a new customer or check a guest in from the front desk."
                   : "Nothing here."}
             </p>
           )}
@@ -144,7 +157,11 @@ export function GuestsPage() {
                       </span>
                     </td>
                     <td className="border-b border-pos-line/70 px-2 py-2.5 font-medium">
-                      {a.rooms.join(", ")}
+                      {a.rooms.length ? (
+                        a.rooms.join(", ")
+                      ) : (
+                        <span className="font-normal text-pos-muted">No room</span>
+                      )}
                     </td>
                     <td className="border-b border-pos-line/70 px-2 py-2.5 whitespace-nowrap text-pos-muted">
                       {a.check_in && a.check_out
@@ -183,10 +200,9 @@ export function GuestsPage() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{a.guest_name}</span>
                     <span className="block truncate text-xs text-pos-muted">
-                      {a.rooms.join(", ")} ·{" "}
-                      {a.check_in && a.check_out
-                        ? `${shortDate(a.check_in)}–${shortDate(a.check_out)}`
-                        : ""}
+                      {a.rooms.length
+                        ? `${a.rooms.join(", ")}${a.check_in && a.check_out ? ` · ${shortDate(a.check_in)}–${shortDate(a.check_out)}` : ""}`
+                        : a.guest_phone || "No room"}
                     </span>
                   </span>
                   <span className="text-right">

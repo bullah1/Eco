@@ -158,7 +158,7 @@ function Frame({ children }: { children: ReactNode }) {
     {
       section: "Front office",
       to: "/pos/guests",
-      label: "Guests",
+      label: "Customers",
       Icon: Users,
       active: pathname.startsWith("/pos/guests") || pathname.startsWith("/pos/account"),
     },

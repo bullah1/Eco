@@ -155,3 +155,13 @@ describe("cash close", () => {
     expect(differenceLabel(5000)).toEqual({ text: "৳50 over", tone: "over" });
   });
 });
+
+import { phoneKey } from "./pos";
+describe("mobile numbers", () => {
+  it("matches the same number however it is typed", () => {
+    expect(phoneKey("+880 1712-345678")).toBe("01712345678");
+    expect(phoneKey("8801712345678")).toBe("01712345678");
+    expect(phoneKey("01712 345678")).toBe("01712345678");
+    expect(phoneKey("1712345678")).toBe("01712345678");
+  });
+});

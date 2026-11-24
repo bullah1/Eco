@@ -579,6 +579,7 @@ export type Database = {
           cancel_reason: string | null
           closed_at: string | null
           closed_by: string | null
+          guest_phone: string
           id: string
           label: string
           note: string
@@ -593,6 +594,7 @@ export type Database = {
           cancel_reason?: string | null
           closed_at?: string | null
           closed_by?: string | null
+          guest_phone?: string
           id?: string
           label?: string
           note?: string
@@ -607,6 +609,7 @@ export type Database = {
           cancel_reason?: string | null
           closed_at?: string | null
           closed_by?: string | null
+          guest_phone?: string
           id?: string
           label?: string
           note?: string
@@ -1057,6 +1060,16 @@ export type Database = {
           p_phone: string
           p_rooms: Json
         }
+        Returns: string
+      }
+      pos_open_account: {
+        Args: { p_email: string; p_name: string; p_note: string; p_phone: string }
+        Returns: string
+      }
+      pos_open_counter_ticket: { Args: { p_label: string; p_phone: string }; Returns: string }
+      pos_ticket_set_phone: { Args: { p_phone: string; p_ticket: string }; Returns: undefined }
+      pos_ticket_charge_phone: {
+        Args: { p_name: string; p_phone: string; p_ticket: string }
         Returns: string
       }
       pos_confirm_booking: { Args: { p_reservation: string }; Returns: number }
