@@ -159,7 +159,7 @@ export function ResortHeader() {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className="size-11 lg:hidden"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(!menuOpen)}
@@ -225,10 +225,30 @@ export function ResortHeader() {
 
 function MobileBookBar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const onHome = pathname === "/";
+  const [pastHero, setPastHero] = useState(false);
+  useEffect(() => {
+    if (!onHome) return;
+    // On the home page the hero already has a booking form, so the bar waits until it is passed.
+    const onScroll = () => {
+      const form = document.querySelector(".sagara-booking-bar");
+      setPastHero(
+        form ? form.getBoundingClientRect().bottom < 0 : window.scrollY > window.innerHeight,
+      );
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [onHome]);
   if (pathname.startsWith("/booking") || pathname.startsWith("/admin")) return null;
+  const show = !onHome || pastHero;
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-resort-white/95 p-3 backdrop-blur lg:hidden">
+    <div
+      aria-hidden={!show}
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-border bg-resort-white/95 p-3 backdrop-blur transition-transform duration-300 lg:hidden ${show ? "translate-y-0" : "translate-y-full"}`}
+    >
       <Button
+        tabIndex={show ? 0 : -1}
         className="h-12 w-full rounded-none bg-resort-gold text-resort-wood hover:bg-primary hover:text-primary-foreground"
         asChild
       >
@@ -244,8 +264,8 @@ export function ResortFooter() {
   const c = resortContact;
   return (
     <footer className="bg-resort-wood pb-20 text-resort-cream lg:pb-0">
-      <div className="mx-auto grid max-w-[1240px] gap-12 px-6 py-16 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:py-20">
-        <div>
+      <div className="mx-auto grid max-w-[1240px] grid-cols-2 gap-x-6 gap-y-10 px-6 py-14 sm:gap-12 sm:px-8 sm:py-16 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:py-20">
+        <div className="col-span-2 lg:col-span-1">
           <BrandLogo tone="dark" size="lg" />
           <p className="mt-5 max-w-xs text-sm leading-7 text-resort-cream/65">
             An eco beach resort on Saint Martin's Island, Bangladesh's only coral island.
@@ -254,7 +274,7 @@ export function ResortFooter() {
         <div>
           <p className="font-display text-lg text-resort-cream">Explore</p>
           <span className="gold-rule mt-3" />
-          <div className="mt-5 grid gap-3 text-sm text-resort-cream/70">
+          <div className="mt-3 grid text-sm text-resort-cream/70 [&>a]:py-2">
             <Link to="/stays" className="transition-colors hover:text-resort-gold">
               Rooms
             </Link>
@@ -276,7 +296,7 @@ export function ResortFooter() {
         <div>
           <p className="font-display text-lg text-resort-cream">Your stay</p>
           <span className="gold-rule mt-3" />
-          <div className="mt-5 grid gap-3 text-sm text-resort-cream/70">
+          <div className="mt-3 grid text-sm text-resort-cream/70 [&>a]:py-2">
             <Link to="/booking" className="transition-colors hover:text-resort-gold">
               Book a room
             </Link>
@@ -288,7 +308,7 @@ export function ResortFooter() {
             </Link>
           </div>
         </div>
-        <div>
+        <div className="col-span-2 sm:col-span-1">
           <p className="font-display text-lg text-resort-cream">Contact</p>
           <span className="gold-rule mt-3" />
           <ul className="mt-5 grid gap-3 text-sm text-resort-cream/70">
@@ -314,7 +334,7 @@ export function ResortFooter() {
           </ul>
           <Link
             to="/contact"
-            className="mt-5 inline-flex items-center gap-2 text-sm text-resort-gold hover:text-resort-cream"
+            className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm text-resort-gold hover:text-resort-cream"
           >
             How to get here <ArrowRight size={14} />
           </Link>

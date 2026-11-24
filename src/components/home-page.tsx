@@ -21,7 +21,7 @@ import {
 } from "@/components/home-sections";
 
 const field =
-  "mt-1 h-11 w-full border border-border bg-resort-white px-3 text-sm text-foreground outline-none transition-colors focus:border-resort-teal focus-visible:ring-2 focus-visible:ring-resort-teal/30";
+  "mt-1 h-11 w-full border border-border bg-resort-white px-3 text-base sm:text-sm text-foreground outline-none transition-colors focus:border-resort-teal focus-visible:ring-2 focus-visible:ring-resort-teal/30";
 
 function Hero() {
   const [index, setIndex] = useState(0);
@@ -68,7 +68,7 @@ function Hero() {
         }}
       />
 
-      <div className="mx-auto w-full max-w-[1180px] px-6 pb-36 pt-20 sm:px-8 lg:pb-40">
+      <div className="mx-auto w-full max-w-[1180px] px-6 pb-32 pt-16 sm:px-8 sm:pt-20 lg:pb-40">
         <div key={index} className="hero-copy-in max-w-xl text-resort-cream" aria-live="polite">
           <p className="flex items-center gap-3 text-[13px] text-resort-gold">
             <span className="h-px w-10 bg-resort-gold" />
@@ -91,7 +91,7 @@ function Hero() {
             </Button>
             <Link
               to="/stays"
-              className="border-b border-resort-cream/40 pb-1 text-sm text-resort-cream transition-colors hover:border-resort-gold hover:text-resort-gold"
+              className="inline-flex min-h-11 items-center text-sm text-resort-cream underline decoration-resort-cream/50 decoration-1 underline-offset-[6px] transition-colors hover:text-resort-gold hover:decoration-resort-gold"
             >
               See the rooms
             </Link>
@@ -153,7 +153,7 @@ function BookingBar() {
         <form
           onSubmit={submit}
           noValidate
-          className="sagara-booking-bar grid gap-4 bg-resort-white p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-[1fr_1fr_0.7fr_0.7fr_auto] lg:items-end"
+          className="sagara-booking-bar grid grid-cols-2 gap-3 bg-resort-white p-4 sm:gap-4 sm:p-6 lg:grid-cols-[1fr_1fr_0.7fr_0.7fr_auto] lg:items-end"
         >
           <label className="text-xs font-medium text-muted-foreground">
             Arrival date
@@ -208,12 +208,12 @@ function BookingBar() {
           </label>
           <Button
             type="submit"
-            className="h-11 rounded-none bg-resort-gold px-7 text-[13px] font-medium text-resort-wood transition-colors hover:bg-primary hover:text-primary-foreground sm:col-span-2 lg:col-span-1"
+            className="h-11 rounded-none bg-resort-gold px-7 text-[13px] font-medium text-resort-wood transition-colors hover:bg-primary hover:text-primary-foreground col-span-2 h-12 lg:col-span-1 lg:h-11"
           >
             Check availability
           </Button>
           {error && (
-            <p role="alert" className="text-sm text-destructive sm:col-span-2 lg:col-span-5">
+            <p role="alert" className="col-span-2 text-sm text-destructive lg:col-span-5">
               {error}
             </p>
           )}
@@ -226,13 +226,13 @@ function BookingBar() {
 
 function Welcome() {
   return (
-    <section className="bg-resort-white px-6 pb-24 pt-20 sm:px-8 lg:pb-32 lg:pt-28">
+    <section className="bg-resort-white px-6 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:pb-32 lg:pt-28">
       <div className="mx-auto grid max-w-[1180px] items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-20">
         <Reveal className="grid grid-cols-2 gap-4">
           {welcome.images.map((img, i) => (
             <div
               key={img.alt}
-              className={`sagara-image-frame aspect-[3/4] ${i === 1 ? "mt-12" : ""}`}
+              className={`sagara-image-frame aspect-[4/5] sm:aspect-[3/4] ${i === 1 ? "mt-8 sm:mt-12" : ""}`}
             >
               <img src={img.src} alt={img.alt} loading="lazy" className="size-full object-cover" />
             </div>

@@ -28,13 +28,13 @@ const promises = [
 /** Plain facts about how booking works, shown where guests decide. */
 export function TrustStrip() {
   return (
-    <ul className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 px-1 lg:grid-cols-4">
+    <ul className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 px-1 sm:mt-6 sm:gap-x-6 sm:gap-y-5 lg:grid-cols-4">
       {promises.map(({ Icon, title, copy }) => (
-        <li key={title} className="flex items-start gap-3">
-          <Icon size={20} strokeWidth={1.5} className="mt-0.5 shrink-0 text-resort-gold-deep" />
+        <li key={title} className="flex items-center gap-2 sm:items-start sm:gap-3">
+          <Icon size={18} strokeWidth={1.5} className="shrink-0 text-resort-gold-deep sm:mt-0.5" />
           <span>
-            <span className="block text-[13px] font-medium text-primary">{title}</span>
-            <span className="block text-xs leading-5 text-muted-foreground">{copy}</span>
+            <span className="block text-xs font-medium text-primary sm:text-[13px]">{title}</span>
+            <span className="hidden text-xs leading-5 text-muted-foreground sm:block">{copy}</span>
           </span>
         </li>
       ))}
