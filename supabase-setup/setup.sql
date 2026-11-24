@@ -244,3 +244,75 @@ REVOKE EXECUTE ON FUNCTION public.handle_new_guest() FROM PUBLIC, anon, authenti
 REVOKE EXECUTE ON FUNCTION public.prepare_reservation() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated;
+
+-- ===== Meals, services and activities guests can add to a booking =====
+CREATE TYPE public.addon_category AS ENUM ('food', 'service', 'activity');
+CREATE TYPE public.addon_unit AS ENUM ('per_person', 'per_person_per_night', 'per_night', 'per_stay');
+
+CREATE TABLE public.resort_addons (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  category public.addon_category NOT NULL,
+  name text NOT NULL,
+  description text NOT NULL DEFAULT '',
+  price_cents integer NOT NULL CHECK (price_cents >= 0),
+  unit public.addon_unit NOT NULL DEFAULT 'per_stay',
+  is_active boolean NOT NULL DEFAULT true,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT SELECT ON public.resort_addons TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.resort_addons TO authenticated;
+GRANT ALL ON public.resort_addons TO service_role;
+ALTER TABLE public.resort_addons ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can view active add-ons" ON public.resort_addons FOR SELECT TO anon, authenticated USING (is_active);
+CREATE POLICY "Admins can view all add-ons" ON public.resort_addons FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins can manage add-ons" ON public.resort_addons FOR ALL TO authenticated USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+
+CREATE TABLE public.reservation_addons (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_id uuid NOT NULL REFERENCES public.reservations(id) ON DELETE CASCADE,
+  addon_id uuid NOT NULL REFERENCES public.resort_addons(id),
+  quantity integer NOT NULL CHECK (quantity BETWEEN 1 AND 500),
+  unit_price_cents integer NOT NULL DEFAULT 0,
+  total_cents integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (reservation_id, addon_id)
+);
+CREATE INDEX reservation_addons_reservation_idx ON public.reservation_addons (reservation_id);
+CREATE INDEX reservation_addons_addon_idx ON public.reservation_addons (addon_id);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.reservation_addons TO authenticated;
+GRANT ALL ON public.reservation_addons TO service_role;
+ALTER TABLE public.reservation_addons ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Guests can view their add-ons" ON public.reservation_addons FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.reservations r WHERE r.id = reservation_id AND (r.user_id = (SELECT auth.uid()) OR public.has_role((SELECT auth.uid()), 'admin'))));
+CREATE POLICY "Guests can add add-ons to pending reservations" ON public.reservation_addons FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM public.reservations r WHERE r.id = reservation_id AND ((r.user_id = (SELECT auth.uid()) AND r.status = 'pending') OR public.has_role((SELECT auth.uid()), 'admin'))));
+CREATE POLICY "Admins can update add-ons" ON public.reservation_addons FOR UPDATE TO authenticated USING (public.has_role((SELECT auth.uid()), 'admin')) WITH CHECK (public.has_role((SELECT auth.uid()), 'admin'));
+CREATE POLICY "Admins can delete add-ons" ON public.reservation_addons FOR DELETE TO authenticated USING (public.has_role((SELECT auth.uid()), 'admin'));
+
+-- Price is always taken from the catalogue on the server, never from the browser.
+CREATE OR REPLACE FUNCTION public.prepare_reservation_addon()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE addon_price integer; addon_active boolean;
+BEGIN
+  SELECT price_cents, is_active INTO addon_price, addon_active FROM public.resort_addons WHERE id = NEW.addon_id;
+  IF NOT FOUND OR NOT addon_active THEN RAISE EXCEPTION 'This add-on is not available'; END IF;
+  NEW.unit_price_cents := addon_price;
+  NEW.total_cents := addon_price * NEW.quantity;
+  RETURN NEW;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.prepare_reservation_addon() FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER prepare_reservation_addon_before_insert
+BEFORE INSERT ON public.reservation_addons FOR EACH ROW EXECUTE FUNCTION public.prepare_reservation_addon();
+
+-- Sample items (prices in paisa: 35000 = ৳350). Edit them in Admin → Meals & extras.
+INSERT INTO public.resort_addons (category, name, description, price_cents, unit, sort_order) VALUES
+  ('food', 'Breakfast', 'Paratha, eggs, bhaji, fruit and tea each morning', 35000, 'per_person_per_night', 10),
+  ('food', 'Seafood lunch', 'Rice, dal, vegetables and the catch of the day', 55000, 'per_person_per_night', 20),
+  ('food', 'Dinner', 'Bangladeshi home-style dinner each evening', 50000, 'per_person_per_night', 30),
+  ('food', 'Beach BBQ dinner', 'Grilled fish, chicken and naan by the water, one evening', 90000, 'per_person', 40),
+  ('service', 'Jetty pick-up and drop', 'Met at the Saint Martin''s jetty with your luggage carried', 30000, 'per_stay', 50),
+  ('service', 'Laundry', 'Wash and fold for your stay', 20000, 'per_stay', 60),
+  ('activity', 'Speedboat trip to Chhera Dwip', 'Return speedboat for your group', 350000, 'per_stay', 70),
+  ('activity', 'Bonfire setup', 'Fire, seating and lights on the beach for one evening', 150000, 'per_stay', 80);

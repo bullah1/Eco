@@ -1,6 +1,6 @@
 export type Priced = { nightly_rate_cents: number; max_guests: number };
 
-export const formatMoney = (cents: number) => `$${(cents / 100).toLocaleString()}`;
+export const formatMoney = (cents: number) => `৳${(cents / 100).toLocaleString("en-IN")}`;
 
 /**
  * Split the guests across the chosen rooms: every room gets at least one guest, the rest

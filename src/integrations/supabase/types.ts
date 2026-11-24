@@ -41,6 +41,51 @@ export type Database = {
         }
         Relationships: []
       }
+      reservation_addons: {
+        Row: {
+          addon_id: string
+          created_at: string
+          id: string
+          quantity: number
+          reservation_id: string
+          total_cents: number
+          unit_price_cents: number
+        }
+        Insert: {
+          addon_id: string
+          created_at?: string
+          id?: string
+          quantity: number
+          reservation_id: string
+          total_cents?: number
+          unit_price_cents?: number
+        }
+        Update: {
+          addon_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          reservation_id?: string
+          total_cents?: number
+          unit_price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservation_addons_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "resort_addons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_addons_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reservations: {
         Row: {
           booking_reference: string
@@ -100,6 +145,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      resort_addons: {
+        Row: {
+          category: Database["public"]["Enums"]["addon_category"]
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          name: string
+          price_cents: number
+          sort_order: number
+          unit: Database["public"]["Enums"]["addon_unit"]
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["addon_category"]
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price_cents: number
+          sort_order?: number
+          unit?: Database["public"]["Enums"]["addon_unit"]
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["addon_category"]
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_cents?: number
+          sort_order?: number
+          unit?: Database["public"]["Enums"]["addon_unit"]
+        }
+        Relationships: []
       }
       resort_content: {
         Row: {
@@ -282,6 +363,8 @@ export type Database = {
       }
     }
     Enums: {
+      addon_category: "food" | "service" | "activity"
+      addon_unit: "per_person" | "per_person_per_night" | "per_night" | "per_stay"
       app_role: "admin" | "guest"
       reservation_status: "pending" | "confirmed" | "cancelled"
     }
@@ -411,6 +494,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      addon_category: ["food", "service", "activity"],
+      addon_unit: ["per_person", "per_person_per_night", "per_night", "per_stay"],
       app_role: ["admin", "guest"],
       reservation_status: ["pending", "confirmed", "cancelled"],
     },
