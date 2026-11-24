@@ -1,76 +1,276 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowRight, CalendarDays, Minus, Plus, Waves } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { firstStayConcept, secondStayConcept } from "@/lib/resort-data";
-import { ContactFaqSection, FacilitiesSection, GallerySection, HomeRooms, PackagesSection } from "@/components/home-sections";
-import heroImage from "@/assets/sagara-coast-hero.jpg";
+import { Reveal } from "@/components/reveal";
+import { heroSlides, welcome } from "@/lib/resort-content";
+import {
+  ActivitiesSection,
+  ContactFaqSection,
+  DiningSection,
+  FacilitiesSection,
+  FinalCta,
+  GallerySection,
+  HomeRooms,
+  IndoorGamesSection,
+  PackagesSection,
+  TravelGuideSection,
+} from "@/components/home-sections";
 
-export function HomePage() {
-  const today = new Date().toISOString().slice(0, 10);
-  const nextDay = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState(2);
+const field =
+  "mt-1 h-11 w-full border border-border bg-resort-white px-3 text-sm text-foreground outline-none transition-colors focus:border-resort-teal focus-visible:ring-2 focus-visible:ring-resort-teal/30";
+
+function Hero() {
+  const [index, setIndex] = useState(0);
+  const count = heroSlides.length;
+  const go = (step: number) => setIndex((current) => (current + step + count) % count);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setTimeout(() => go(1), 7000);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+
+  const slide = heroSlides[index]!;
 
   return (
-    <>
-      <section className="sagara-hero flex items-end">
-        <img className="sagara-hero-image" src={heroImage} alt="Traditional wooden fishing boats on the turquoise water off Saint Martin's Island" width={1600} height={960} fetchPriority="high" />
-        <div className="relative mx-auto w-full max-w-[1440px] px-6 pb-32 pt-32 sm:px-10 sm:pb-40 lg:px-16 lg:pb-44">
-          <div className="sagara-hero-copy max-w-[960px] text-resort-cream">
-            <p className="flex items-center gap-4 text-xs tracking-[0.04em] text-resort-gold"><span className="h-px w-12 bg-resort-gold"/>Saint Martin's Island · 20°37′N 92°19′E</p>
-            <h1 className="mt-8 text-[44px] font-normal leading-[0.98] tracking-[-0.025em] sm:text-7xl lg:text-[104px]">Stay by the sea<br/>on Saint Martin's</h1>
-            <p className="mt-8 max-w-xl text-base leading-8 text-resort-cream/90 sm:text-lg">Santa Monica Eco Beach Resort, on Bangladesh's only coral island. Choose your dates and rooms, and the resort confirms your stay.</p>
-            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
-              <Button size="lg" className="h-12 rounded-none bg-resort-gold px-8 text-primary hover:bg-resort-cream" asChild><Link to="/booking">Reserve a room <ArrowRight size={16}/></Link></Button>
-              <Link to="/stays" className="group inline-flex items-center gap-2 border-b border-resort-cream/40 pb-1 text-sm text-resort-cream transition-colors hover:border-resort-gold hover:text-resort-gold">See the rooms <ArrowRight size={15}/></Link>
-            </div>
+    <section
+      className="relative isolate flex min-h-[max(600px,calc(100svh-109px))] items-center overflow-hidden bg-resort-wood"
+      aria-roledescription="carousel"
+      aria-label="Santa Monica Eco Beach Resort"
+    >
+      {heroSlides.map((item, i) => (
+        <div
+          key={item.title}
+          className="hero-slide absolute inset-0 -z-20"
+          data-active={i === index ? "true" : "false"}
+          style={{ opacity: i === index ? 1 : 0 }}
+          aria-hidden={i !== index}
+        >
+          <img
+            src={item.image}
+            alt={item.alt}
+            className="size-full object-cover"
+            fetchPriority={i === 0 ? "high" : "low"}
+            loading={i === 0 ? "eager" : "lazy"}
+          />
+        </div>
+      ))}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          background:
+            "linear-gradient(90deg, color-mix(in oklab, var(--resort-wood) 78%, transparent) 0%, color-mix(in oklab, var(--resort-wood) 45%, transparent) 50%, color-mix(in oklab, var(--resort-wood) 10%, transparent) 100%), linear-gradient(0deg, color-mix(in oklab, var(--resort-wood) 55%, transparent), transparent 40%)",
+        }}
+      />
+
+      <div className="mx-auto w-full max-w-[1180px] px-6 pb-36 pt-20 sm:px-8 lg:pb-40">
+        <div key={index} className="hero-copy-in max-w-xl text-resort-cream" aria-live="polite">
+          <p className="flex items-center gap-3 text-[13px] text-resort-gold">
+            <span className="h-px w-10 bg-resort-gold" />
+            Saint Martin's Island · 20°37′N 92°19′E
+          </p>
+          <h1 className="mt-6 text-[40px] font-medium leading-[1.08] sm:text-[56px] lg:text-[64px]">
+            {slide.title}
+          </h1>
+          <p className="mt-6 max-w-md text-[15px] leading-7 text-resort-cream/85 sm:text-base">
+            {slide.copy}
+          </p>
+          <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
+            <Button
+              asChild
+              className="h-12 rounded-none bg-resort-gold px-8 text-[13px] font-medium text-resort-wood transition-colors hover:bg-resort-white"
+            >
+              <Link to="/booking">
+                Book a room <ArrowRight size={15} />
+              </Link>
+            </Button>
+            <Link
+              to="/stays"
+              className="border-b border-resort-cream/40 pb-1 text-sm text-resort-cream transition-colors hover:border-resort-gold hover:text-resort-gold"
+            >
+              See the rooms
+            </Link>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="relative z-10 mx-auto -mt-9 max-w-6xl px-5 sm:px-8">
-        <form action="/booking" className="sagara-booking-bar grid gap-px bg-border p-px sm:grid-cols-2 lg:grid-cols-[1fr_1fr_0.8fr_auto]">
-          <label className="flex items-center gap-3 bg-resort-white px-5 py-4">
-            <CalendarDays size={18} className="text-resort-ocean"/><span className="min-w-0 flex-1"><span className="block text-xs font-medium text-muted-foreground">Arrival</span><Input type="date" name="checkIn" aria-label="Arrival date" min={today} value={checkIn} onChange={(event)=>{setCheckIn(event.target.value); if (checkOut && event.target.value >= checkOut) setCheckOut("");}} required className="mt-1 h-7 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"/></span>
+      <div className="absolute bottom-28 right-6 flex items-center gap-4 text-resort-cream sm:right-8 lg:bottom-32 lg:right-[max(2rem,calc((100vw-1180px)/2+2rem))]">
+        <span className="font-display text-sm tabular-nums">
+          {String(index + 1).padStart(2, "0")}
+          <span className="text-resort-cream/50"> / {String(count).padStart(2, "0")}</span>
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => go(-1)}
+            aria-label="Previous slide"
+            className="grid size-10 place-items-center border border-resort-cream/40 transition-colors hover:border-resort-gold hover:bg-resort-gold hover:text-resort-wood"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => go(1)}
+            aria-label="Next slide"
+            className="grid size-10 place-items-center border border-resort-cream/40 transition-colors hover:border-resort-gold hover:bg-resort-gold hover:text-resort-wood"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BookingBar() {
+  const navigate = useNavigate();
+  const today = new Date().toISOString().slice(0, 10);
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
+  const [error, setError] = useState("");
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!checkIn || !checkOut) return setError("Choose your arrival and departure dates");
+    if (checkOut <= checkIn) return setError("Departure must be after arrival");
+    setError("");
+    void navigate({
+      to: "/booking",
+      search: { checkIn, checkOut, guests: Math.min(6, adults + children) },
+    });
+  }
+
+  return (
+    <section className="relative z-10 bg-resort-white">
+      <div className="relative -top-16 mx-auto -mb-16 max-w-[1100px] px-4 sm:px-8">
+        <form
+          onSubmit={submit}
+          noValidate
+          className="sagara-booking-bar grid gap-4 bg-resort-white p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-[1fr_1fr_0.7fr_0.7fr_auto] lg:items-end"
+        >
+          <label className="text-xs font-medium text-muted-foreground">
+            Arrival date
+            <input
+              type="date"
+              className={field}
+              min={today}
+              value={checkIn}
+              onChange={(e) => {
+                setCheckIn(e.target.value);
+                if (checkOut && e.target.value >= checkOut) setCheckOut("");
+              }}
+            />
           </label>
-          <label className="flex items-center gap-3 bg-resort-white px-5 py-4">
-            <CalendarDays size={18} className="text-resort-ocean"/><span className="min-w-0 flex-1"><span className="block text-xs font-medium text-muted-foreground">Departure</span><Input type="date" name="checkOut" aria-label="Departure date" min={checkIn || nextDay} value={checkOut} onChange={(event)=>setCheckOut(event.target.value)} required className="mt-1 h-7 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"/></span>
+          <label className="text-xs font-medium text-muted-foreground">
+            Departure date
+            <input
+              type="date"
+              className={field}
+              min={checkIn || today}
+              value={checkOut}
+              onChange={(e) => setCheckOut(e.target.value)}
+            />
           </label>
-          <div className="flex items-center gap-3 bg-resort-white px-5 py-4"><Waves size={18} className="text-resort-ocean"/><span className="flex-1"><span className="block text-xs font-medium text-muted-foreground">Guests</span><span className="mt-1 flex items-center gap-3 text-sm"><Button type="button" variant="ghost" size="icon" className="size-6" aria-label="Remove a guest" onClick={()=>setGuests(Math.max(1, guests-1))}><Minus size={13}/></Button><span className="min-w-4 text-center">{guests}</span><Button type="button" variant="ghost" size="icon" className="size-6" aria-label="Add a guest" onClick={()=>setGuests(Math.min(6, guests+1))}><Plus size={13}/></Button></span></span><input type="hidden" name="guests" value={guests}/></div>
-          <Button type="submit" className="h-full min-h-16 rounded-none px-8">Check availability <ArrowRight size={15}/></Button>
+          <label className="text-xs font-medium text-muted-foreground">
+            Adults
+            <select
+              className={field}
+              value={adults}
+              onChange={(e) => setAdults(Number(e.target.value))}
+            >
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-medium text-muted-foreground">
+            Children
+            <select
+              className={field}
+              value={children}
+              onChange={(e) => setChildren(Number(e.target.value))}
+            >
+              {[0, 1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            type="submit"
+            className="h-11 rounded-none bg-primary px-7 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-resort-gold hover:text-resort-wood sm:col-span-2 lg:col-span-1"
+          >
+            Check availability
+          </Button>
+          {error && (
+            <p role="alert" className="text-sm text-destructive sm:col-span-2 lg:col-span-5">
+              {error}
+            </p>
+          )}
         </form>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      <section className="bg-background px-6 py-24 sm:px-10 lg:py-36">
-        <div className="mx-auto max-w-5xl">
-          <div className="grid grid-cols-2 gap-4 sm:gap-6">
-            <div className="sagara-image-frame aspect-[3/4]"><img src={firstStayConcept.image} alt={firstStayConcept.imageAlt} loading="lazy" width={1600} height={1067} className="size-full object-cover" /></div>
-            <div className="sagara-image-frame mt-10 aspect-[3/4] sm:mt-16"><img src={secondStayConcept.image} alt={secondStayConcept.imageAlt} loading="lazy" width={1600} height={1067} className="size-full object-cover" /></div>
-          </div>
-          <div className="mt-16 max-w-2xl">
-            <h2 className="text-5xl font-normal leading-[1.05] text-primary sm:text-6xl">Welcome to Santa Monica</h2>
-            <span className="mt-6 block h-px w-16 bg-resort-gold" />
-            <p className="mt-8 text-lg leading-8 text-primary/80">Saint Martin's sits at the south-eastern tip of the Bay of Bengal. Days here follow the tide: fishing boats out at dawn, palms along the beach, long evenings on the water.</p>
-            <p className="mt-4 text-base leading-8 text-muted-foreground">Santa Monica Eco Beach Resort is a quiet place to stay on Bangladesh's only coral island.</p>
-            <Button asChild className="mt-10 h-12 rounded-none bg-resort-gold px-8 text-sm tracking-[0.08em] text-primary hover:bg-primary hover:text-primary-foreground"><Link to="/stays">Know more</Link></Button>
-          </div>
-        </div>
-      </section>
+function Welcome() {
+  return (
+    <section className="bg-resort-white px-6 pb-24 pt-20 sm:px-8 lg:pb-32 lg:pt-28">
+      <div className="mx-auto grid max-w-[1180px] items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-20">
+        <Reveal className="grid grid-cols-2 gap-4">
+          {welcome.images.map((img, i) => (
+            <div
+              key={img.alt}
+              className={`sagara-image-frame aspect-[3/4] ${i === 1 ? "mt-12" : ""}`}
+            >
+              <img src={img.src} alt={img.alt} loading="lazy" className="size-full object-cover" />
+            </div>
+          ))}
+        </Reveal>
+        <Reveal delay={120}>
+          <p className="text-[13px] font-medium text-resort-ocean">Welcome</p>
+          <h2 className="mt-3 text-[34px] leading-[1.15] text-primary sm:text-[44px]">
+            {welcome.title}
+          </h2>
+          <span className="gold-rule mt-5" />
+          <p className="mt-6 font-display text-xl leading-8 text-primary/85">{welcome.lead}</p>
+          <p className="mt-5 text-[15px] leading-7 text-muted-foreground">{welcome.copy}</p>
+          <Button
+            asChild
+            className="mt-9 h-12 rounded-none bg-resort-gold px-8 text-[13px] font-medium text-resort-wood transition-colors hover:bg-primary hover:text-primary-foreground"
+          >
+            <Link to="/stays">Know more</Link>
+          </Button>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
 
+export function HomePage() {
+  return (
+    <>
+      <Hero />
+      <BookingBar />
+      <Welcome />
       <HomeRooms />
-
       <FacilitiesSection />
+      <DiningSection />
+      <ActivitiesSection />
+      <IndoorGamesSection />
       <PackagesSection />
       <GallerySection />
+      <TravelGuideSection />
       <ContactFaqSection />
-
-      <section className="bg-background px-6 py-24 sm:px-10 lg:py-32"><div className="mx-auto grid max-w-7xl gap-12 md:grid-cols-3 md:gap-16">{[{n:"i",title:"On the shoreline",copy:"Rooms sit close to the water on Saint Martin's Island, Bangladesh's only coral island."},{n:"ii",title:"Built with natural materials",copy:"Timber, linen and local craft keep the footprint light and the rooms warm."},{n:"iii",title:"Request in minutes",copy:"Pick dates and rooms online. The resort confirms your stay directly."}].map(({n,title,copy})=><div key={title}><p className="font-display text-xl italic text-resort-gold">{n}</p><div className="mt-4 h-px bg-border"/><h3 className="mt-6 text-3xl font-normal text-primary">{title}</h3><p className="mt-3 text-sm leading-7 text-muted-foreground">{copy}</p></div>)}</div></section>
-
-      <section className="relative overflow-hidden bg-primary px-6 py-28 sm:px-10 lg:py-40"><div className="relative mx-auto max-w-3xl text-center text-resort-cream"><p className="text-sm text-resort-gold">Santa Monica Eco Beach Resort</p><h2 className="mt-6 text-5xl font-normal leading-[1.02] sm:text-7xl">Plan your stay</h2><p className="mx-auto mt-6 max-w-md text-base leading-8 text-resort-cream/75">Pick your dates and rooms. The resort confirms every request.</p><Button size="lg" className="mt-10 h-12 rounded-none bg-resort-gold px-10 text-primary hover:bg-resort-cream" asChild><Link to="/booking">Check availability <ArrowRight size={15}/></Link></Button></div></section>
+      <FinalCta />
     </>
   );
 }
