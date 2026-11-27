@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { addDays, nights, resortToday, shortDate, shortDateTime, taka } from "@/lib/pos";
 import {
+  balanceLabel,
   eventLabel,
   filterBookings,
   historySummary,
@@ -288,7 +289,13 @@ export function BookingsPage() {
                   <th className="border-b border-pos-line px-2 py-2 font-normal">Stay</th>
                   <th className="border-b border-pos-line px-2 py-2 font-normal">From</th>
                   <th className="border-b border-pos-line px-2 py-2 text-right font-normal">
-                    Value
+                    Rooms
+                  </th>
+                  <th className="border-b border-pos-line px-2 py-2 text-right font-normal">
+                    Food &amp; services
+                  </th>
+                  <th className="border-b border-pos-line px-2 py-2 text-right font-normal">
+                    Balance
                   </th>
                   <th className="border-b border-pos-line py-2 pl-3 font-normal">Status</th>
                 </tr>
@@ -340,6 +347,12 @@ export function BookingsPage() {
                     <td className="border-b border-pos-line/70 px-2 py-2.5 text-right font-medium tabular-nums">
                       {taka(b.total_cents)}
                     </td>
+                    <td className="border-b border-pos-line/70 px-2 py-2.5 text-right tabular-nums text-pos-muted">
+                      {b.bill ? taka(b.bill.food_cents + b.bill.service_cents) : "–"}
+                    </td>
+                    <td className="border-b border-pos-line/70 px-2 py-2.5 text-right">
+                      <Balance bill={b.bill} />
+                    </td>
                     <td className="border-b border-pos-line/70 py-2.5 pl-3">
                       <StatusBadge status={b.status} />
                     </td>
@@ -368,6 +381,7 @@ export function BookingsPage() {
                     </span>
                     <span className="flex shrink-0 flex-col items-end gap-1">
                       <span className="font-semibold tabular-nums">{taka(b.total_cents)}</span>
+                      <Balance bill={b.bill} />
                       <StatusBadge status={b.status} />
                     </span>
                   </button>
@@ -380,6 +394,19 @@ export function BookingsPage() {
 
       <BookingSheet booking={open} onClose={() => setOpen(null)} />
     </>
+  );
+}
+
+function Balance({ bill }: { bill: HistoryBooking["bill"] }) {
+  const b = balanceLabel(bill);
+  if (b.tone === "none") return <span className="text-xs text-pos-muted">Not billed yet</span>;
+  if (b.tone === "paid") return <span className="text-xs font-medium text-emerald-700">Paid</span>;
+  return (
+    <span
+      className={`whitespace-nowrap text-xs font-medium tabular-nums ${b.tone === "due" ? "text-red-700" : "text-pos-teal"}`}
+    >
+      {taka(Math.abs(bill!.balance_cents))} {b.text}
+    </span>
   );
 }
 
@@ -507,6 +534,28 @@ function BookingSheet({
                 </table>
               </div>
 
+              {b.bill && (
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-lg border border-pos-line p-3 text-sm sm:grid-cols-4">
+                  {(
+                    [
+                      ["Whole bill", b.bill.charges_cents],
+                      ["Food & services", b.bill.food_cents + b.bill.service_cents],
+                      ["Paid", b.bill.paid_cents],
+                    ] as const
+                  ).map(([k, v]) => (
+                    <div key={k}>
+                      <dt className="text-xs text-pos-muted">{k}</dt>
+                      <dd className="font-medium tabular-nums">{taka(v)}</dd>
+                    </div>
+                  ))}
+                  <div>
+                    <dt className="text-xs text-pos-muted">Balance</dt>
+                    <dd>
+                      <Balance bill={b.bill} />
+                    </dd>
+                  </div>
+                </dl>
+              )}
               {b.note && (
                 <p className="whitespace-pre-line rounded-lg bg-pos-ground p-3 text-sm">{b.note}</p>
               )}

@@ -133,3 +133,20 @@ describe("timeline", () => {
     ]);
   });
 });
+
+import { balanceLabel } from "./pos-history";
+describe("bill balance", () => {
+  it("says what is owed", () => {
+    const bill = (balance_cents: number) => ({
+      food_cents: 0,
+      service_cents: 0,
+      charges_cents: 0,
+      paid_cents: 0,
+      balance_cents,
+    });
+    expect(balanceLabel(undefined).tone).toBe("none");
+    expect(balanceLabel(bill(5000)).tone).toBe("due");
+    expect(balanceLabel(bill(-5000)).tone).toBe("credit");
+    expect(balanceLabel(bill(0))).toEqual({ text: "Paid", tone: "paid" });
+  });
+});

@@ -38,7 +38,25 @@ export type HistoryBooking = {
   total_cents: number;
   account_id: string | null;
   status: BookingStatus;
+  /** The guest's bill, once they have one (checked in or opened at the desk). */
+  bill?: BillTotals | undefined;
 };
+
+export type BillTotals = {
+  food_cents: number;
+  service_cents: number;
+  charges_cents: number;
+  paid_cents: number;
+  balance_cents: number;
+};
+
+/** "৳1,200 due", "Paid", "৳300 credit" or "Not billed yet". */
+export function balanceLabel(bill: BillTotals | undefined) {
+  if (!bill) return { text: "Not billed yet", tone: "none" as const };
+  if (bill.balance_cents > 0) return { text: "due", tone: "due" as const };
+  if (bill.balance_cents < 0) return { text: "credit", tone: "credit" as const };
+  return { text: "Paid", tone: "paid" as const };
+}
 
 export const statusLook: Record<BookingStatus, { label: string; cls: string }> = {
   request: { label: "Website request", cls: "bg-amber-100 text-amber-900" },
@@ -210,7 +228,28 @@ export function useBookingHistory(from: string, to: string, dateBy: DateBy, toda
           { name: u.name, type_name: (u.room_types as { name: string } | null)?.name ?? "" },
         ]),
       );
-      return groupBookings((res.data ?? []) as Row[], rooms, today);
+      const list = groupBookings((res.data ?? []) as Row[], rooms, today);
+      const ids = [
+        ...new Set(list.map((b) => b.account_id).filter((x): x is string => Boolean(x))),
+      ];
+      const totals = new Map<string, BillTotals>();
+      for (let i = 0; i < ids.length; i += 200) {
+        const { data, error } = await supabase
+          .from("stay_account_totals")
+          .select("account_id, food_cents, service_cents, charges_cents, paid_cents, balance_cents")
+          .in("account_id", ids.slice(i, i + 200));
+        if (error) throw error;
+        for (const t of data ?? [])
+          if (t.account_id)
+            totals.set(t.account_id, {
+              food_cents: t.food_cents ?? 0,
+              service_cents: t.service_cents ?? 0,
+              charges_cents: t.charges_cents ?? 0,
+              paid_cents: t.paid_cents ?? 0,
+              balance_cents: t.balance_cents ?? 0,
+            });
+      }
+      return list.map((b) => (b.account_id ? { ...b, bill: totals.get(b.account_id) } : b));
     },
   });
 }
