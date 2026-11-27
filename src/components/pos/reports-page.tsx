@@ -12,6 +12,7 @@ import {
   type ReportRange,
   type ReportSummary,
 } from "@/lib/pos-reports";
+import { categoryLabel, useApprovedDiscounts, useExpenses, type Expense } from "@/lib/pos-extras";
 import { LoadState, PageTitle, Panel } from "./pos-shell";
 
 const kindLabel: Record<string, string> = {
@@ -37,6 +38,19 @@ export function ReportsPage() {
   const board = useBoardData();
   const roomCount = board.data?.units.filter((u) => u.is_active).length ?? 0;
   const [exporting, setExporting] = useState(false);
+  const expensesQ = useExpenses(from, to);
+  const discountsQ = useApprovedDiscounts(from, to);
+  const expenses = useMemo(
+    () => (expensesQ.data?.rows ?? []).filter((e) => !e.voided_at),
+    [expensesQ.data],
+  );
+  const spent = expenses.reduce((t, e) => t + e.amount_cents, 0);
+  const byCategory = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const e of expenses) m.set(e.category, (m.get(e.category) ?? 0) + e.amount_cents);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [expenses]);
+  const extrasReady = Boolean(expensesQ.data) && !expensesQ.data?.notSetUp;
 
   const s = useMemo(
     () => (rows.data ? summarize({ from, to, roomCount, ...rows.data }) : null),
@@ -51,6 +65,7 @@ export function ReportsPage() {
     try {
       await downloadExcel(
         s,
+        { spent, discounts: discountsQ.data ?? 0, expenses, ready: extrasReady },
         `${label} (${period})`,
         `santa-monica-report-${from}-to-${addDays(to, -1)}.xlsx`,
       );
@@ -145,6 +160,28 @@ export function ReportsPage() {
             />
           </section>
 
+          {extrasReady && (
+            <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <Big label="Expenses" value={taka(spent)} sub={`${expenses.length} entries`} />
+              <Big
+                label={s.received - spent >= 0 ? "Profit" : "Loss"}
+                value={taka(Math.abs(s.received - spent))}
+                sub="money received − expenses"
+                tone={s.received - spent >= 0 ? "good" : "bad"}
+              />
+              <Big
+                label="Discounts given"
+                value={taka(discountsQ.data ?? 0)}
+                sub="approved in this period"
+              />
+              <Big
+                label="Billed after discounts"
+                value={taka(s.sales - (discountsQ.data ?? 0))}
+                sub={`billed ${taka(s.sales)}`}
+              />
+            </section>
+          )}
+
           {s.days > 1 && (
             <Panel
               title={byMonth ? "Money received each month" : "Money received each day"}
@@ -189,6 +226,15 @@ export function ReportsPage() {
                 empty="No stays in this period."
               />
             </Panel>
+            {extrasReady && (
+              <Panel title="Expenses by type">
+                <Bars
+                  rows={byCategory.map(([c, v]) => [categoryLabel(c), v])}
+                  format={taka}
+                  empty="No expenses in this period."
+                />
+              </Panel>
+            )}
           </div>
         </div>
       )}
@@ -204,15 +250,25 @@ function Big({
   value,
   sub,
   strong,
+  tone,
 }: {
   label: string;
   value: string;
   sub: string;
   strong?: boolean;
+  tone?: "good" | "bad";
 }) {
   return (
     <div
-      className={`rounded-xl border px-4 py-3.5 ${strong ? "border-pos-ocean bg-pos-ocean text-white" : "border-pos-line bg-white"}`}
+      className={`rounded-xl border px-4 py-3.5 ${
+        strong
+          ? "border-pos-ocean bg-pos-ocean text-white"
+          : tone === "good"
+            ? "border-pos-teal bg-pos-teal-soft"
+            : tone === "bad"
+              ? "border-red-200 bg-red-50 text-red-900"
+              : "border-pos-line bg-white"
+      }`}
     >
       <p className={`text-xs ${strong ? "text-pos-sand/75" : "text-pos-muted"}`}>{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
@@ -292,7 +348,12 @@ function StackBars({
 }
 
 /** Builds a 4-sheet .xlsx in the browser: summary, daily, monthly, breakdown. */
-async function downloadExcel(s: ReportSummary, title: string, fileName: string) {
+async function downloadExcel(
+  s: ReportSummary,
+  x: { spent: number; discounts: number; expenses: Expense[]; ready: boolean },
+  title: string,
+  fileName: string,
+) {
   const { default: writeXlsxFile } = await import("write-excel-file/browser");
   const bold = (value: string | number) => ({ value, fontWeight: "bold" as const });
   const cell = (value: string | number) => ({ value });
@@ -307,6 +368,16 @@ async function downloadExcel(s: ReportSummary, title: string, fileName: string) 
     [cell("From restaurant"), cell(tk(s.restaurant))],
     [cell("Billed to guests (rooms, food, services)"), cell(tk(s.sales))],
     [cell("Number of payments"), cell(s.payments)],
+    ...(x.ready
+      ? [
+          [cell("Discounts given"), cell(tk(x.discounts))],
+          [cell("Expenses"), cell(tk(x.spent))],
+          [
+            bold(s.received - x.spent >= 0 ? "Profit" : "Loss"),
+            bold(tk(Math.abs(s.received - x.spent))),
+          ],
+        ]
+      : []),
     [],
     [bold("Occupancy"), bold("")],
     [cell("Rooms filled (%)"), cell(s.occupancy)],
@@ -353,5 +424,25 @@ async function downloadExcel(s: ReportSummary, title: string, fileName: string) 
       sheet: "Breakdown",
       columns: [{ width: 28 }, { width: 16 }],
     },
+    ...(x.ready
+      ? [
+          {
+            data: [
+              [bold("Date"), bold("Type"), bold("What"), bold("Paid by"), bold("Amount (Tk)")],
+              ...x.expenses.map((e) => [
+                cell(e.expense_date),
+                cell(categoryLabel(e.category)),
+                cell(e.description),
+                cell(methodLabel(e.method)),
+                cell(tk(e.amount_cents)),
+              ]),
+              [bold("Total"), cell(""), cell(""), cell(""), bold(tk(x.spent))],
+            ],
+            sheet: "Expenses",
+            columns: [{ width: 12 }, { width: 24 }, { width: 36 }, { width: 10 }, { width: 14 }],
+            stickyRowsCount: 1,
+          },
+        ]
+      : []),
   ]).toFile(fileName);
 }

@@ -2,7 +2,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { User } from "@supabase/supabase-js";
 import {
+  BadgePercent,
   BarChart3,
+  Package,
+  Receipt,
   BedDouble,
   ExternalLink,
   Menu,
@@ -27,6 +30,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { supabase } from "@/integrations/supabase/client";
 import { useStaffRole, useUnbilledOrders } from "@/lib/pos";
 import { useDrawerOpen } from "@/lib/pos-cash";
+import { isLow, usePendingDiscounts, useStock } from "@/lib/pos-extras";
 import { PosSearch } from "./pos-search";
 
 type PosSession = { user: User; isAdmin: boolean };
@@ -151,6 +155,9 @@ function Frame({ children }: { children: ReactNode }) {
   const orders = useUnbilledOrders();
   const waiting = orders.data?.length ?? 0;
   const drawer = useDrawerOpen();
+  const stock = useStock();
+  const lowStock = (stock.data?.items ?? []).filter((i) => i.is_active && isLow(i)).length;
+  const pendingDiscounts = usePendingDiscounts(isAdmin).data?.length ?? 0;
 
   const nav = [
     {
@@ -167,6 +174,7 @@ function Frame({ children }: { children: ReactNode }) {
       label: "Customers",
       Icon: Users,
       active: pathname.startsWith("/pos/guests") || pathname.startsWith("/pos/account"),
+      badge: pendingDiscounts,
     },
     {
       section: "Front office",
@@ -191,11 +199,27 @@ function Frame({ children }: { children: ReactNode }) {
       active: pathname.startsWith("/pos/kitchen"),
     },
     {
+      section: "Restaurant",
+      to: "/pos/stock",
+      label: "Kitchen stock",
+      short: "Stock",
+      Icon: Package,
+      active: pathname.startsWith("/pos/stock"),
+      badge: lowStock,
+    },
+    {
       section: "Money",
       to: "/pos/cash",
       label: "Cash",
       Icon: Wallet,
       active: pathname.startsWith("/pos/cash"),
+    },
+    {
+      section: "Money",
+      to: "/pos/expenses",
+      label: "Expenses",
+      Icon: Receipt,
+      active: pathname.startsWith("/pos/expenses"),
     },
     {
       section: "Money",
@@ -217,6 +241,14 @@ function Frame({ children }: { children: ReactNode }) {
       ? [
           {
             section: "Settings",
+            to: "/pos/prices",
+            label: "Room prices",
+            short: "Prices",
+            Icon: BadgePercent,
+            active: pathname.startsWith("/pos/prices"),
+          },
+          {
+            section: "Settings",
             to: "/pos/staff",
             label: "Staff",
             Icon: ShieldCheck,
@@ -232,7 +264,9 @@ function Frame({ children }: { children: ReactNode }) {
   const barItems = nav.filter((n) => primary.includes(n.to));
   const moreItems = nav.filter((n) => !primary.includes(n.to));
   const moreActive = moreItems.some((n) => n.active);
-  const moreBadge = !drawer.data && drawer.data !== undefined;
+  const moreBadge =
+    (!drawer.data && drawer.data !== undefined) ||
+    moreItems.some((n) => "badge" in n && (n.badge ?? 0) > 0);
 
   const sections = ["Front office", "Restaurant", "Money", "Settings"]
     .map((title) => ({ title, items: nav.filter((n) => n.section === title) }))
@@ -420,12 +454,12 @@ function Frame({ children }: { children: ReactNode }) {
             <SheetTitle>More</SheetTitle>
           </SheetHeader>
           <div className="grid grid-cols-3 gap-2 px-4">
-            {moreItems.map(({ to, label, Icon, active }) => (
+            {moreItems.map(({ to, label, Icon, active, ...rest }) => (
               <Link
                 key={to}
                 to={to}
                 onClick={() => setMoreOpen(false)}
-                className={`flex h-20 flex-col items-center justify-center gap-1.5 rounded-xl border text-[13px] ${
+                className={`relative flex h-20 flex-col items-center justify-center gap-1.5 rounded-xl border text-[13px] ${
                   active
                     ? "border-pos-ocean bg-pos-ocean text-white"
                     : "border-pos-line bg-white text-pos-ink"
@@ -433,6 +467,11 @@ function Frame({ children }: { children: ReactNode }) {
               >
                 <Icon size={22} strokeWidth={1.6} />
                 {label}
+                {"badge" in rest && (rest.badge ?? 0) > 0 && (
+                  <span className="absolute right-2 top-2 grid h-5 min-w-5 place-items-center rounded-full bg-pos-gold px-1.5 text-[11px] font-semibold text-pos-ocean">
+                    {rest.badge}
+                  </span>
+                )}
               </Link>
             ))}
           </div>
@@ -538,4 +577,18 @@ export function LoadState({
       </p>
     );
   return null;
+}
+
+/** Shown on a new screen until supabase-setup/pos-extras.sql has been run once. */
+export function SetupNotice() {
+  return (
+    <div role="status" className="rounded-xl border border-pos-gold bg-[#fbf6ec] p-5 text-sm">
+      <p className="font-semibold">One-time setup needed</p>
+      <p className="mt-1 text-pos-muted">
+        This screen needs the new database tables. In the Supabase dashboard open SQL Editor, paste
+        the file <code className="rounded bg-white px-1">supabase-setup/pos-extras.sql</code> and
+        press Run. Then reload this page.
+      </p>
+    </div>
+  );
 }

@@ -49,7 +49,8 @@ import {
   type TileState,
 } from "@/lib/pos";
 import { useReportRows } from "@/lib/pos-reports";
-import { LoadState, PageTitle, Panel } from "./pos-shell";
+import { isLow, qty, usePendingDiscounts, useStock } from "@/lib/pos-extras";
+import { LoadState, PageTitle, Panel, usePos } from "./pos-shell";
 import { BookingDialog, type BookingStart } from "./walk-in-dialog";
 import { FrontDeskCalendar } from "./front-desk-calendar";
 
@@ -103,6 +104,10 @@ export function FrontDesk() {
     .filter((a) => a.status === "open" && a.balance_cents > 0)
     .sort((a, b) => b.balance_cents - a.balance_cents);
   const owedTotal = owing.reduce((s, a) => s + a.balance_cents, 0);
+  const { isAdmin } = usePos();
+  const stock = useStock();
+  const lowStock = (stock.data?.items ?? []).filter((i) => i.is_active && isLow(i));
+  const pendingDiscounts = usePendingDiscounts(isAdmin).data ?? [];
   const tiles = useMemo(
     () => (board.data ? buildBoard(board.data.units, board.data.reservations, today) : []),
     [board.data, today],
@@ -318,6 +323,58 @@ export function FrontDesk() {
             </Panel>
 
             <div className="grid content-start gap-5">
+              {pendingDiscounts.length > 0 && (
+                <Panel
+                  title="Discounts waiting for you"
+                  className="border-amber-300 bg-amber-50/60"
+                >
+                  <ul className="divide-y divide-amber-200">
+                    {pendingDiscounts.map((d) => (
+                      <li key={d.id}>
+                        <Link
+                          to="/pos/account/$id"
+                          params={{ id: d.account_id }}
+                          className="flex items-center justify-between gap-3 py-2.5"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{d.guest_name}</span>
+                            <span className="block truncate text-xs text-pos-muted">
+                              {d.reason}
+                            </span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-1 font-medium tabular-nums">
+                            {taka(d.amount_cents)} <ArrowRight size={14} />
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </Panel>
+              )}
+
+              {lowStock.length > 0 && (
+                <Panel
+                  title="Kitchen stock running low"
+                  className="border-red-200"
+                  aside={
+                    <Link to="/pos/stock" className="text-xs text-pos-teal">
+                      Open stock
+                    </Link>
+                  }
+                >
+                  <ul className="flex flex-wrap gap-1.5">
+                    {lowStock.map((i) => (
+                      <li
+                        key={i.id}
+                        className="rounded-full bg-red-50 px-3 py-1 text-[13px] text-red-900"
+                      >
+                        {i.name} · {qty(i.quantity)} {i.unit}
+                      </li>
+                    ))}
+                  </ul>
+                </Panel>
+              )}
+
               <Panel
                 title="Arriving today"
                 aside={<span className="text-xs text-pos-muted">{arrivals.length}</span>}

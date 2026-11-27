@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/lib/auth-context";
 import { getGuestProfile } from "@/lib/resort.functions";
+import { isSeasonal, roomPrice, useStayQuotes } from "@/lib/stay-quote";
 import type { AvailableRoom } from "@/components/room-card";
 import {
   allocateGuests,
@@ -208,10 +209,18 @@ export function BookingFlow() {
     setPresetDone(true);
   }, [presetDone, presetType, roomQuery.data, freeByType, search.rooms]);
 
+  const quotes = useStayQuotes(
+    types.map((t) => t.id),
+    checkIn,
+    checkOut,
+    datesOk,
+  ).data;
+  const priceOf = (type: { id: string; nightly_rate_cents: number }) =>
+    roomPrice(quotes, type.id, type.nightly_rate_cents, nights);
   const roomLines = types
     .map((type) => {
       const count = selectedRooms.filter((r) => r.room_type_id === type.id).length;
-      return { type, count, total: type.nightly_rate_cents * nights * count };
+      return { type, count, total: priceOf(type) * count };
     })
     .filter((l) => l.count > 0);
   const total = roomLines.reduce((s, l) => s + l.total, 0);
@@ -294,7 +303,9 @@ export function BookingFlow() {
               <span>
                 {l.type.name} × {l.count}
                 <span className="block text-xs text-muted-foreground">
-                  {formatMoney(l.type.nightly_rate_cents)} × {nightWord}
+                  {isSeasonal(quotes, l.type.id)
+                    ? `${nightWord}, includes seasonal / weekend prices`
+                    : `${formatMoney(l.type.nightly_rate_cents)} × ${nightWord}`}
                 </span>
               </span>
               <span className="tabular-nums text-primary">{formatMoney(l.total)}</span>
@@ -506,7 +517,7 @@ export function BookingFlow() {
                                 {free <= 2 ? `Only ${free} left` : `${free} free`}
                                 {count > 0 && (
                                   <span className="ml-2 tabular-nums text-primary">
-                                    · {formatMoney(type.nightly_rate_cents * nights * count)}
+                                    · {formatMoney(priceOf(type) * count)}
                                   </span>
                                 )}
                               </span>

@@ -466,6 +466,7 @@ export function useAccount(id: string, enabled = true) {
           service: totals.data?.service_cents ?? 0,
           charges: totals.data?.charges_cents ?? 0,
           paid: totals.data?.paid_cents ?? 0,
+          discount: totals.data?.discount_cents ?? 0,
           balance: totals.data?.balance_cents ?? 0,
         },
         charges: (charges.data ?? []) as ChargeLine[],

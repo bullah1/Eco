@@ -47,6 +47,7 @@ import {
 } from "@/lib/pos";
 import { AddChargeDialog } from "./add-charge-dialog";
 import { BookingDialog } from "./walk-in-dialog";
+import { DiscountSection } from "./discounts";
 import { LoadState, Panel, usePos } from "./pos-shell";
 
 const sourceLabel: Record<ChargeLine["source"], string> = {
@@ -406,20 +407,43 @@ export function AccountPage({ id }: { id: string }) {
                   <dt>Total</dt>
                   <dd className="tabular-nums">{taka(totals.charges)}</dd>
                 </div>
+                {totals.discount > 0 && (
+                  <div className="flex justify-between text-pos-gold-deep">
+                    <dt>Discount</dt>
+                    <dd className="tabular-nums">− {taka(totals.discount)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between text-pos-teal">
-                  <dt>Paid</dt>
+                  <dt>Paid{totals.charges === 0 && totals.paid > 0 ? " in advance" : ""}</dt>
                   <dd className="tabular-nums">− {taka(totals.paid)}</dd>
                 </div>
               </dl>
               <div className="mt-3 rounded-lg bg-pos-sand px-4 py-3">
                 <p className="text-xs text-pos-muted">
-                  {totals.balance > 0 ? "Balance to pay" : "Balance"}
+                  {totals.balance > 0
+                    ? "Balance to pay"
+                    : totals.balance < 0
+                      ? "Advance held for the guest"
+                      : "Balance"}
                 </p>
                 <p className="font-display text-[34px] leading-tight tabular-nums text-pos-ocean">
-                  {taka(totals.balance)}
+                  {taka(Math.abs(totals.balance))}
                 </p>
+                {totals.balance < 0 && (
+                  <p className="text-xs text-pos-muted">
+                    It comes off the room bill at check-in. If the booking is cancelled, an admin
+                    can remove the payment when the money is returned.
+                  </p>
+                )}
               </div>
               {open && totals.balance > 0 && <PayForm accountId={id} balance={totals.balance} />}
+              <DiscountSection
+                accountId={id}
+                open={open}
+                isAdmin={isAdmin}
+                balance={totals.balance}
+                charges={totals.charges}
+              />
             </Panel>
 
             {open && (
@@ -875,6 +899,12 @@ function PrintableBill({ data }: { data: AccountData }) {
           <dt>Total</dt>
           <dd>{taka(totals.charges)}</dd>
         </div>
+        {totals.discount > 0 && (
+          <div className="flex justify-between">
+            <dt>Discount</dt>
+            <dd>− {taka(totals.discount)}</dd>
+          </div>
+        )}
         {paid.map((p) => (
           <div key={p.id} className="flex justify-between">
             <dt>

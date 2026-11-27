@@ -116,6 +116,212 @@ export type Database = {
         }
         Relationships: []
       }
+      account_discounts: {
+        Row: {
+          account_id: string
+          amount_cents: number
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string
+          id: string
+          reason: string
+          requested_at: string
+          requested_by: string | null
+          status: string
+        }
+        Insert: {
+          account_id: string
+          amount_cents: number
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string
+          id?: string
+          reason: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          amount_cents?: number
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string
+          id?: string
+          reason?: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_discounts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "stay_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount_cents: number
+          cash_movement_id: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string
+          expense_date: string
+          id: string
+          method: string
+          reference: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount_cents: number
+          cash_movement_id?: string | null
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          expense_date?: string
+          id?: string
+          method: string
+          reference?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          cash_movement_id?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          expense_date?: string
+          id?: string
+          method?: string
+          reference?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: []
+      }
+      room_rate_rules: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          priority: number
+          room_type_id: string | null
+          start_date: string | null
+          value: number
+          weekdays: number[] | null
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          kind: string
+          name: string
+          priority?: number
+          room_type_id?: string | null
+          start_date?: string | null
+          value: number
+          weekdays?: number[] | null
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          priority?: number
+          room_type_id?: string | null
+          start_date?: string | null
+          value?: number
+          weekdays?: number[] | null
+        }
+        Relationships: []
+      }
+      stock_items: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          min_quantity: number
+          name: string
+          quantity: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_quantity?: number
+          name: string
+          quantity?: number
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_quantity?: number
+          name?: string
+          quantity?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_moves: {
+        Row: {
+          change: number
+          created_at: string
+          created_by: string | null
+          expense_id: string | null
+          id: string
+          item_id: string
+          kind: string
+          note: string
+          quantity_after: number
+        }
+        Insert: {
+          change: number
+          created_at?: string
+          created_by?: string | null
+          expense_id?: string | null
+          id?: string
+          item_id: string
+          kind: string
+          note?: string
+          quantity_after: number
+        }
+        Update: {
+          change?: number
+          created_at?: string
+          created_by?: string | null
+          expense_id?: string | null
+          id?: string
+          item_id?: string
+          kind?: string
+          note?: string
+          quantity_after?: number
+        }
+        Relationships: []
+      }
       cash_movements: {
         Row: {
           amount_cents: number
@@ -990,11 +1196,73 @@ export type Database = {
           paid_cents: number | null
           room_cents: number | null
           service_cents: number | null
+          discount_cents: number | null
         }
         Relationships: []
       }
     }
     Functions: {
+      pos_add_expense: {
+        Args: {
+          p_amount_cents: number
+          p_category: string
+          p_date: string
+          p_description: string
+          p_from_drawer: boolean
+          p_method: string
+          p_reference: string
+        }
+        Returns: string
+      }
+      pos_void_expense: { Args: { p_expense: string; p_reason: string }; Returns: undefined }
+      pos_save_stock_item: {
+        Args: { p_active: boolean; p_id: string | null; p_min_quantity: number; p_name: string; p_unit: string }
+        Returns: string
+      }
+      pos_stock_move: {
+        Args: {
+          p_cost_cents?: number | null
+          p_from_drawer?: boolean
+          p_item: string
+          p_kind: string
+          p_method?: string
+          p_note: string
+          p_quantity: number
+        }
+        Returns: number
+      }
+      pos_take_advance: {
+        Args: { p_amount_cents: number; p_method: string; p_reference: string; p_reservation: string }
+        Returns: string
+      }
+      pos_save_rate_rule: {
+        Args: {
+          p_active: boolean
+          p_end: string | null
+          p_id: string | null
+          p_kind: string
+          p_name: string
+          p_priority: number
+          p_room_type: string | null
+          p_start: string | null
+          p_value: number
+          p_weekdays: number[] | null
+        }
+        Returns: string
+      }
+      pos_delete_rate_rule: { Args: { p_id: string }; Returns: undefined }
+      pos_request_discount: {
+        Args: { p_account: string; p_amount_cents: number; p_reason: string }
+        Returns: string
+      }
+      pos_decide_discount: {
+        Args: { p_decision: string; p_discount: string; p_note: string }
+        Returns: undefined
+      }
+      quote_stay: {
+        Args: { p_check_in: string; p_check_out: string; p_room_type: string }
+        Returns: Json
+      }
       pos_cash_movement: { Args: { p_amount_cents: number; p_kind: string; p_reason: string }; Returns: string }
       pos_close_shift: { Args: { p_counted_cents: number; p_note: string }; Returns: Json }
       pos_open_shift: { Args: { p_note: string; p_opening_cents: number }; Returns: string }

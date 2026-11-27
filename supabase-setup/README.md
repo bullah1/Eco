@@ -20,3 +20,6 @@
 8. For in-stay food and service orders (pending bills for the POS), run `in-stay-orders.sql`
    (already applied on the current project).
 9. For meals and extras chosen per day, run `dated-extras.sql` (already applied on the current project).
+10. For expenses and profit, kitchen stock, advance payments on bookings, seasonal / weekend
+    room prices and admin-approved discounts, run `pos-extras.sql` (after `pos-customer-accounts.sql`).
+    It is safe to run more than once.

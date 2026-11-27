@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, LoaderCircle, LogIn, Phone, Search, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
+  LogIn,
+  Phone,
+  Search,
+  Wallet,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +44,7 @@ import {
 } from "@/lib/pos-timeline";
 import { LoadState } from "./pos-shell";
 import type { BookingStart } from "./walk-in-dialog";
+import { AdvanceDialog, useAdvanceHeld } from "./advance-dialog";
 
 const toneLook: Record<BarTone, { label: string; cls: string }> = {
   in_house: { label: "In house", cls: "bg-pos-ocean text-white" },
@@ -443,6 +453,7 @@ function StaySheet({
 }) {
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
+  const [advanceFor, setAdvanceFor] = useState<PosReservation | null>(null);
   const confirm = usePosAction((id: string) =>
     rpc(supabase.rpc("pos_confirm_booking", { p_reservation: id })),
   );
@@ -459,6 +470,10 @@ function StaySheet({
     ? groupArrivals(all, today).find((a) => a.reservations.some((x) => x.id === r.id))
     : undefined;
   const total = together.reduce((s, x) => s + x.total_cents, 0);
+  const { held } = useAdvanceHeld(
+    r && r.stay_status === "expected" ? r.guest_phone : "",
+    Boolean(r && r.stay_status === "expected"),
+  );
 
   function close() {
     setCancelling(false);
@@ -494,6 +509,9 @@ function StaySheet({
                 <div>
                   <dt className="text-xs text-pos-muted">Room total</dt>
                   <dd className="font-medium tabular-nums">{taka(total)}</dd>
+                  {held > 0 && (
+                    <dd className="text-xs font-medium text-pos-teal">Advance paid {taka(held)}</dd>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <dt className="text-xs text-pos-muted">
@@ -536,6 +554,11 @@ function StaySheet({
                     className="h-11 gap-2 bg-pos-ocean text-white hover:bg-pos-ocean/90"
                   >
                     <LogIn size={16} /> Check in
+                  </Button>
+                )}
+                {r.stay_status === "expected" && r.status !== "cancelled" && (
+                  <Button variant="outline" className="h-11 gap-2" onClick={() => setAdvanceFor(r)}>
+                    <Wallet size={16} /> {held > 0 ? "Take more advance" : "Take advance"}
                   </Button>
                 )}
                 {r.status === "pending" && r.stay_status === "expected" && (
@@ -620,6 +643,11 @@ function StaySheet({
           </>
         )}
       </SheetContent>
+      <AdvanceDialog
+        reservation={advanceFor}
+        bookingTotal={total}
+        onClose={() => setAdvanceFor(null)}
+      />
     </Sheet>
   );
 }

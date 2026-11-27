@@ -27,6 +27,7 @@ import {
   usePosAction,
   type PosUnit,
 } from "@/lib/pos";
+import { isSeasonal, roomPrice, useStayQuotes } from "@/lib/stay-quote";
 
 export type BookingStart = {
   checkIn?: string | undefined;
@@ -106,7 +107,17 @@ export function BookingDialog({
 
   const unitById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const chosen = (free.data ?? []).filter((r) => picked[r.room_unit_id]);
-  const total = chosen.reduce((s, r) => s + r.nightly_rate_cents * n, 0);
+  const quotes = useStayQuotes(
+    chosen.map((r) => r.room_type_id),
+    checkIn,
+    checkOut,
+    open && validDates,
+  ).data;
+  const total = chosen.reduce(
+    (s, r) => s + roomPrice(quotes, r.room_type_id, r.nightly_rate_cents, n),
+    0,
+  );
+  const seasonal = chosen.some((r) => isSeasonal(quotes, r.room_type_id));
 
   const rooms = () =>
     chosen.map((r) => ({ unit_id: r.room_unit_id, guests: picked[r.room_unit_id] }));
@@ -343,7 +354,9 @@ export function BookingDialog({
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-pos-line pt-4">
           <p>
-            <span className="text-xs text-pos-muted">Room total</span>
+            <span className="text-xs text-pos-muted">
+              Room total{seasonal ? " · includes seasonal / weekend prices" : ""}
+            </span>
             <span className="block text-2xl font-semibold tabular-nums">{taka(total)}</span>
           </p>
           <div className="flex flex-wrap gap-2">

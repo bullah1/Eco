@@ -175,6 +175,10 @@ export function GuestsPage() {
                     <td className="border-b border-pos-line/70 py-2.5 pl-2 text-right font-semibold tabular-nums">
                       {a.balance_cents > 0 ? (
                         taka(a.balance_cents)
+                      ) : a.balance_cents < 0 ? (
+                        <span className="font-normal text-pos-teal">
+                          Advance {taka(-a.balance_cents)}
+                        </span>
                       ) : (
                         <span className="font-normal text-pos-teal">Settled</span>
                       )}
@@ -207,7 +211,11 @@ export function GuestsPage() {
                   </span>
                   <span className="text-right">
                     <span className="block font-semibold tabular-nums">
-                      {a.balance_cents > 0 ? taka(a.balance_cents) : "Settled"}
+                      {a.balance_cents > 0
+                        ? taka(a.balance_cents)
+                        : a.balance_cents < 0
+                          ? `Advance ${taka(-a.balance_cents)}`
+                          : "Settled"}
                     </span>
                     <span className="text-[11px] text-pos-muted">
                       of {taka(a.room_cents + a.food_cents + a.service_cents)}

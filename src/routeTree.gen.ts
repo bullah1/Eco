@@ -24,13 +24,16 @@ import { Route as StaysRouteImport } from './routes/stays'
 import { Route as PosIndexRouteImport } from './routes/pos.index'
 import { Route as PosCashRouteImport } from './routes/pos.cash'
 import { Route as PosCleanRouteImport } from './routes/pos.clean'
+import { Route as PosExpensesRouteImport } from './routes/pos.expenses'
 import { Route as PosGuestsRouteImport } from './routes/pos.guests'
 import { Route as PosHousekeepingRouteImport } from './routes/pos.housekeeping'
 import { Route as PosKitchenRouteImport } from './routes/pos.kitchen'
 import { Route as PosOrdersRouteImport } from './routes/pos.orders'
+import { Route as PosPricesRouteImport } from './routes/pos.prices'
 import { Route as PosReportsRouteImport } from './routes/pos.reports'
 import { Route as PosRestaurantRouteImport } from './routes/pos.restaurant'
 import { Route as PosStaffRouteImport } from './routes/pos.staff'
+import { Route as PosStockRouteImport } from './routes/pos.stock'
 import { Route as RoomsSlugRouteImport } from './routes/rooms.$slug'
 import { Route as PosAccountIdRouteImport } from './routes/pos.account.$id'
 
@@ -109,6 +112,11 @@ const PosCleanRoute = PosCleanRouteImport.update({
   path: '/clean',
   getParentRoute: () => PosRoute,
 } as any)
+const PosExpensesRoute = PosExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => PosRoute,
+} as any)
 const PosGuestsRoute = PosGuestsRouteImport.update({
   id: '/guests',
   path: '/guests',
@@ -129,6 +137,11 @@ const PosOrdersRoute = PosOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => PosRoute,
 } as any)
+const PosPricesRoute = PosPricesRouteImport.update({
+  id: '/prices',
+  path: '/prices',
+  getParentRoute: () => PosRoute,
+} as any)
 const PosReportsRoute = PosReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -142,6 +155,11 @@ const PosRestaurantRoute = PosRestaurantRouteImport.update({
 const PosStaffRoute = PosStaffRouteImport.update({
   id: '/staff',
   path: '/staff',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosStockRoute = PosStockRouteImport.update({
+  id: '/stock',
+  path: '/stock',
   getParentRoute: () => PosRoute,
 } as any)
 const RoomsSlugRoute = RoomsSlugRouteImport.update({
@@ -170,13 +188,16 @@ export interface FileRoutesByFullPath {
   '/stays': typeof StaysRoute
   '/pos/cash': typeof PosCashRoute
   '/pos/clean': typeof PosCleanRoute
+  '/pos/expenses': typeof PosExpensesRoute
   '/pos/guests': typeof PosGuestsRoute
   '/pos/housekeeping': typeof PosHousekeepingRoute
   '/pos/kitchen': typeof PosKitchenRoute
   '/pos/orders': typeof PosOrdersRoute
+  '/pos/prices': typeof PosPricesRoute
   '/pos/reports': typeof PosReportsRoute
   '/pos/restaurant': typeof PosRestaurantRoute
   '/pos/staff': typeof PosStaffRoute
+  '/pos/stock': typeof PosStockRoute
   '/rooms/$slug': typeof RoomsSlugRoute
   '/pos/': typeof PosIndexRoute
   '/pos/account/$id': typeof PosAccountIdRoute
@@ -195,13 +216,16 @@ export interface FileRoutesByTo {
   '/stays': typeof StaysRoute
   '/pos/cash': typeof PosCashRoute
   '/pos/clean': typeof PosCleanRoute
+  '/pos/expenses': typeof PosExpensesRoute
   '/pos/guests': typeof PosGuestsRoute
   '/pos/housekeeping': typeof PosHousekeepingRoute
   '/pos/kitchen': typeof PosKitchenRoute
   '/pos/orders': typeof PosOrdersRoute
+  '/pos/prices': typeof PosPricesRoute
   '/pos/reports': typeof PosReportsRoute
   '/pos/restaurant': typeof PosRestaurantRoute
   '/pos/staff': typeof PosStaffRoute
+  '/pos/stock': typeof PosStockRoute
   '/rooms/$slug': typeof RoomsSlugRoute
   '/pos': typeof PosIndexRoute
   '/pos/account/$id': typeof PosAccountIdRoute
@@ -222,13 +246,16 @@ export interface FileRoutesById {
   '/stays': typeof StaysRoute
   '/pos/cash': typeof PosCashRoute
   '/pos/clean': typeof PosCleanRoute
+  '/pos/expenses': typeof PosExpensesRoute
   '/pos/guests': typeof PosGuestsRoute
   '/pos/housekeeping': typeof PosHousekeepingRoute
   '/pos/kitchen': typeof PosKitchenRoute
   '/pos/orders': typeof PosOrdersRoute
+  '/pos/prices': typeof PosPricesRoute
   '/pos/reports': typeof PosReportsRoute
   '/pos/restaurant': typeof PosRestaurantRoute
   '/pos/staff': typeof PosStaffRoute
+  '/pos/stock': typeof PosStockRoute
   '/rooms/$slug': typeof RoomsSlugRoute
   '/pos/': typeof PosIndexRoute
   '/pos/account/$id': typeof PosAccountIdRoute
@@ -250,13 +277,16 @@ export interface FileRouteTypes {
     | '/stays'
     | '/pos/cash'
     | '/pos/clean'
+    | '/pos/expenses'
     | '/pos/guests'
     | '/pos/housekeeping'
     | '/pos/kitchen'
     | '/pos/orders'
+    | '/pos/prices'
     | '/pos/reports'
     | '/pos/restaurant'
     | '/pos/staff'
+    | '/pos/stock'
     | '/rooms/$slug'
     | '/pos/'
     | '/pos/account/$id'
@@ -275,13 +305,16 @@ export interface FileRouteTypes {
     | '/stays'
     | '/pos/cash'
     | '/pos/clean'
+    | '/pos/expenses'
     | '/pos/guests'
     | '/pos/housekeeping'
     | '/pos/kitchen'
     | '/pos/orders'
+    | '/pos/prices'
     | '/pos/reports'
     | '/pos/restaurant'
     | '/pos/staff'
+    | '/pos/stock'
     | '/rooms/$slug'
     | '/pos'
     | '/pos/account/$id'
@@ -301,13 +334,16 @@ export interface FileRouteTypes {
     | '/stays'
     | '/pos/cash'
     | '/pos/clean'
+    | '/pos/expenses'
     | '/pos/guests'
     | '/pos/housekeeping'
     | '/pos/kitchen'
     | '/pos/orders'
+    | '/pos/prices'
     | '/pos/reports'
     | '/pos/restaurant'
     | '/pos/staff'
+    | '/pos/stock'
     | '/rooms/$slug'
     | '/pos/'
     | '/pos/account/$id'
@@ -436,6 +472,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosCleanRouteImport
       parentRoute: typeof PosRoute
     }
+    '/pos/expenses': {
+      id: '/pos/expenses'
+      path: '/expenses'
+      fullPath: '/pos/expenses'
+      preLoaderRoute: typeof PosExpensesRouteImport
+      parentRoute: typeof PosRoute
+    }
     '/pos/guests': {
       id: '/pos/guests'
       path: '/guests'
@@ -464,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosOrdersRouteImport
       parentRoute: typeof PosRoute
     }
+    '/pos/prices': {
+      id: '/pos/prices'
+      path: '/prices'
+      fullPath: '/pos/prices'
+      preLoaderRoute: typeof PosPricesRouteImport
+      parentRoute: typeof PosRoute
+    }
     '/pos/reports': {
       id: '/pos/reports'
       path: '/reports'
@@ -483,6 +533,13 @@ declare module '@tanstack/react-router' {
       path: '/staff'
       fullPath: '/pos/staff'
       preLoaderRoute: typeof PosStaffRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/stock': {
+      id: '/pos/stock'
+      path: '/stock'
+      fullPath: '/pos/stock'
+      preLoaderRoute: typeof PosStockRouteImport
       parentRoute: typeof PosRoute
     }
     '/rooms/$slug': {
@@ -505,13 +562,16 @@ declare module '@tanstack/react-router' {
 interface PosRouteChildren {
   PosCashRoute: typeof PosCashRoute
   PosCleanRoute: typeof PosCleanRoute
+  PosExpensesRoute: typeof PosExpensesRoute
   PosGuestsRoute: typeof PosGuestsRoute
   PosHousekeepingRoute: typeof PosHousekeepingRoute
   PosKitchenRoute: typeof PosKitchenRoute
   PosOrdersRoute: typeof PosOrdersRoute
+  PosPricesRoute: typeof PosPricesRoute
   PosReportsRoute: typeof PosReportsRoute
   PosRestaurantRoute: typeof PosRestaurantRoute
   PosStaffRoute: typeof PosStaffRoute
+  PosStockRoute: typeof PosStockRoute
   PosIndexRoute: typeof PosIndexRoute
   PosAccountIdRoute: typeof PosAccountIdRoute
 }
@@ -519,13 +579,16 @@ interface PosRouteChildren {
 const PosRouteChildren: PosRouteChildren = {
   PosCashRoute: PosCashRoute,
   PosCleanRoute: PosCleanRoute,
+  PosExpensesRoute: PosExpensesRoute,
   PosGuestsRoute: PosGuestsRoute,
   PosHousekeepingRoute: PosHousekeepingRoute,
   PosKitchenRoute: PosKitchenRoute,
   PosOrdersRoute: PosOrdersRoute,
+  PosPricesRoute: PosPricesRoute,
   PosReportsRoute: PosReportsRoute,
   PosRestaurantRoute: PosRestaurantRoute,
   PosStaffRoute: PosStaffRoute,
+  PosStockRoute: PosStockRoute,
   PosIndexRoute: PosIndexRoute,
   PosAccountIdRoute: PosAccountIdRoute,
 }
