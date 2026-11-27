@@ -2,7 +2,11 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { User } from "@supabase/supabase-js";
 import {
+  BarChart3,
+  BedDouble,
   ExternalLink,
+  Menu,
+  Search,
   LayoutGrid,
   LoaderCircle,
   LogOut,
@@ -19,9 +23,11 @@ import { Toaster } from "sonner";
 
 import { LogoMark } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useStaffRole, useUnbilledOrders } from "@/lib/pos";
 import { useDrawerOpen } from "@/lib/pos-cash";
+import { PosSearch } from "./pos-search";
 
 type PosSession = { user: User; isAdmin: boolean };
 const PosContext = createContext<PosSession | null>(null);
@@ -163,6 +169,14 @@ function Frame({ children }: { children: ReactNode }) {
       active: pathname.startsWith("/pos/guests") || pathname.startsWith("/pos/account"),
     },
     {
+      section: "Front office",
+      to: "/pos/housekeeping",
+      label: "Housekeeping",
+      short: "Rooms",
+      Icon: BedDouble,
+      active: pathname.startsWith("/pos/housekeeping"),
+    },
+    {
       section: "Restaurant",
       to: "/pos/restaurant",
       label: "Restaurant",
@@ -182,6 +196,13 @@ function Frame({ children }: { children: ReactNode }) {
       label: "Cash",
       Icon: Wallet,
       active: pathname.startsWith("/pos/cash"),
+    },
+    {
+      section: "Money",
+      to: "/pos/reports",
+      label: "Reports",
+      Icon: BarChart3,
+      active: pathname.startsWith("/pos/reports"),
     },
     {
       section: "Front office",
@@ -204,6 +225,15 @@ function Frame({ children }: { children: ReactNode }) {
         ]
       : []),
   ] as const;
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  // Phone bar: the four screens used all day; everything else sits under "More".
+  const primary = ["/pos", "/pos/guests", "/pos/restaurant", "/pos/orders"];
+  const barItems = nav.filter((n) => primary.includes(n.to));
+  const moreItems = nav.filter((n) => !primary.includes(n.to));
+  const moreActive = moreItems.some((n) => n.active);
+  const moreBadge = !drawer.data && drawer.data !== undefined;
+
   const sections = ["Front office", "Restaurant", "Money", "Settings"]
     .map((title) => ({ title, items: nav.filter((n) => n.section === title) }))
     .filter((s) => s.items.length > 0);
@@ -226,6 +256,17 @@ function Frame({ children }: { children: ReactNode }) {
             <span className="text-[11px] text-pos-sand/70">Front desk</span>
           </span>
         </div>
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className="mb-5 flex h-9 items-center gap-2 rounded-lg bg-white/8 px-3 text-left text-pos-sand/70 transition-colors hover:bg-white/12 hover:text-white"
+        >
+          <Search size={16} strokeWidth={1.7} />
+          <span className="flex-1">Search</span>
+          <kbd className="rounded border border-white/15 px-1.5 text-[10px] text-pos-sand/60">
+            Ctrl K
+          </kbd>
+        </button>
         <nav className="grid gap-5">
           {sections.map((section) => (
             <div key={section.title}>
@@ -302,6 +343,14 @@ function Frame({ children }: { children: ReactNode }) {
         )}
         <button
           type="button"
+          aria-label="Search"
+          onClick={() => setSearchOpen(true)}
+          className="grid size-10 place-items-center rounded-lg text-pos-ink hover:bg-pos-ground"
+        >
+          <Search size={19} />
+        </button>
+        <button
+          type="button"
           aria-label="Sign out"
           onClick={() => void supabase.auth.signOut()}
           className="grid size-10 place-items-center rounded-lg text-pos-muted hover:bg-pos-ground"
@@ -327,10 +376,9 @@ function Frame({ children }: { children: ReactNode }) {
       {/* Tablet / phone bottom bar */}
       <nav
         aria-label="POS sections"
-        className="fixed inset-x-0 bottom-0 z-30 grid border-t border-pos-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
-        style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-pos-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
       >
-        {nav.map(({ to, label, Icon, active, ...rest }) => (
+        {barItems.map(({ to, label, Icon, active, ...rest }) => (
           <Link
             key={to}
             to={to}
@@ -348,7 +396,67 @@ function Frame({ children }: { children: ReactNode }) {
             )}
           </Link>
         ))}
+        <button
+          type="button"
+          onClick={() => setMoreOpen(true)}
+          className={`relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] ${
+            moreActive ? "font-medium text-pos-ocean" : "text-pos-muted"
+          }`}
+        >
+          {moreActive && (
+            <span className="absolute inset-x-6 top-0 h-0.5 rounded-full bg-pos-gold" />
+          )}
+          <Menu size={20} strokeWidth={1.6} />
+          More
+          {moreBadge && (
+            <span className="absolute right-[calc(50%-16px)] top-2.5 size-2 rounded-full bg-amber-500" />
+          )}
+        </button>
       </nav>
+
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl font-sans lg:hidden">
+          <SheetHeader>
+            <SheetTitle>More</SheetTitle>
+          </SheetHeader>
+          <div className="grid grid-cols-3 gap-2 px-4">
+            {moreItems.map(({ to, label, Icon, active }) => (
+              <Link
+                key={to}
+                to={to}
+                onClick={() => setMoreOpen(false)}
+                className={`flex h-20 flex-col items-center justify-center gap-1.5 rounded-xl border text-[13px] ${
+                  active
+                    ? "border-pos-ocean bg-pos-ocean text-white"
+                    : "border-pos-line bg-white text-pos-ink"
+                }`}
+              >
+                <Icon size={22} strokeWidth={1.6} />
+                {label}
+              </Link>
+            ))}
+          </div>
+          <div className="grid gap-1.5 border-t border-pos-line px-4 pb-6 pt-4 text-[13px] text-pos-muted">
+            {drawer.data !== undefined && (
+              <span className={drawer.data ? "" : "font-medium text-amber-700"}>
+                {drawer.data ? "Cash drawer open" : "Cash drawer closed"}
+              </span>
+            )}
+            <span className="truncate">
+              {user.email} · {isAdmin ? "Admin" : "Staff"}
+            </span>
+            <a href="/" className="inline-flex items-center gap-1 text-pos-teal">
+              <ExternalLink size={13} /> Open the website
+            </a>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <PosSearch
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        pages={nav.map(({ to, label, Icon }) => ({ to, label, Icon }))}
+      />
     </div>
   );
 }

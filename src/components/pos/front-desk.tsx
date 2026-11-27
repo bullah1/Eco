@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -50,17 +50,31 @@ import { LoadState, PageTitle, Panel } from "./pos-shell";
 import { BookingDialog, type BookingStart } from "./walk-in-dialog";
 import { FrontDeskCalendar } from "./front-desk-calendar";
 
-const tileLook: Record<TileState, { label: string; cls: string }> = {
-  in_house: { label: "In house", cls: "border-pos-ocean bg-pos-ocean text-white" },
-  leaving: { label: "Leaving today", cls: "border-pos-gold-deep bg-[#f3e6cf] text-[#4d3a17]" },
-  arriving: { label: "Arriving", cls: "border-pos-teal bg-pos-teal-soft text-pos-ocean" },
-  free: { label: "Free", cls: "border-[#c9c3b8] bg-white text-pos-ink" },
+const tileLook: Record<TileState, { label: string; short: string; cls: string }> = {
+  in_house: {
+    label: "In house",
+    short: "In house",
+    cls: "border-pos-ocean bg-pos-ocean text-white",
+  },
+  leaving: {
+    label: "Leaving today",
+    short: "Leaving",
+    cls: "border-pos-gold-deep bg-[#f3e6cf] text-[#4d3a17]",
+  },
+  arriving: {
+    label: "Arriving",
+    short: "Arriving",
+    cls: "border-pos-teal bg-pos-teal-soft text-pos-ocean",
+  },
+  free: { label: "Free", short: "Free", cls: "border-[#c9c3b8] bg-white text-pos-ink" },
   dirty: {
     label: "Needs cleaning",
+    short: "Dirty",
     cls: "border-dashed border-[#8c8a85] bg-[#ecebe6] text-[#45443f]",
   },
   maintenance: {
     label: "Out of order",
+    short: "Repair",
     cls: "border-dashed border-red-300 bg-red-50 text-red-900",
   },
 };
@@ -68,7 +82,8 @@ const tileLook: Record<TileState, { label: string; cls: string }> = {
 export function FrontDesk() {
   const board = useBoardData();
   const navigate = useNavigate();
-  const view = useSearch({ strict: false }).view === "calendar" ? "calendar" : "today";
+  const search = useSearch({ strict: false });
+  const view = search.view === "calendar" ? "calendar" : "today";
   const [booking, setBooking] = useState<BookingStart | null>(null);
   const [openTile, setOpenTile] = useState<BoardTile | null>(null);
   const [checkIn, setCheckIn] = useState<Arrival | null>(null);
@@ -103,6 +118,14 @@ export function FrontDesk() {
     }
     return [...seen.values()].sort((a, b) => a.check_in.localeCompare(b.check_in)).slice(0, 8);
   }, [board.data, today]);
+
+  // Opened from the search box: /pos?room=<unit id> shows that room's panel.
+  useEffect(() => {
+    if (!search.room || tiles.length === 0) return;
+    const tile = tiles.find((t) => t.unit.id === search.room);
+    if (tile) setOpenTile(tile);
+    void navigate({ to: "/pos", search: {}, replace: true });
+  }, [search.room, tiles, navigate]);
 
   const groups = useMemo(() => {
     const map = new Map<string, BoardTile[]>();
@@ -246,7 +269,7 @@ export function FrontDesk() {
                                 {tile.unit.name}
                               </span>
                               <span className="min-w-0 truncate text-[10.5px] opacity-85">
-                                {tileLook[tile.state].label}
+                                {tileLook[tile.state].short}
                               </span>
                             </span>
                             <span className="truncate text-xs opacity-90">
