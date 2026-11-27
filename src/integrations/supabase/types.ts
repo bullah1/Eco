@@ -322,6 +322,39 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_events: {
+        Row: {
+          actor_id: string | null
+          actor_name: string
+          booking_group: string | null
+          created_at: string
+          detail: string
+          id: string
+          kind: string
+          reservation_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_name?: string
+          booking_group?: string | null
+          created_at?: string
+          detail?: string
+          id?: string
+          kind: string
+          reservation_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_name?: string
+          booking_group?: string | null
+          created_at?: string
+          detail?: string
+          id?: string
+          kind?: string
+          reservation_id?: string
+        }
+        Relationships: []
+      }
       cash_movements: {
         Row: {
           amount_cents: number
@@ -596,6 +629,7 @@ export type Database = {
           checked_out_at: string | null
           stay_status: string
           booking_reference: string
+          booked_via: string
           check_in: string
           check_out: string
           extended_nights: number
@@ -619,6 +653,7 @@ export type Database = {
           checked_out_at?: string | null
           stay_status?: string
           booking_reference?: string
+          booked_via?: string
           guest_email?: string
           guest_name?: string
           guest_phone?: string
@@ -642,6 +677,7 @@ export type Database = {
           checked_out_at?: string | null
           stay_status?: string
           booking_reference?: string
+          booked_via?: string
           guest_email?: string
           guest_name?: string
           guest_phone?: string

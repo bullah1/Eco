@@ -5,6 +5,7 @@ import {
   BadgePercent,
   BarChart3,
   HandCoins,
+  History,
   Package,
   Receipt,
   BedDouble,
@@ -168,6 +169,14 @@ function Frame({ children }: { children: ReactNode }) {
       short: "Desk",
       Icon: LayoutGrid,
       active: pathname === "/pos" || pathname === "/pos/",
+    },
+    {
+      section: "Front office",
+      to: "/pos/bookings",
+      label: "Booking history",
+      short: "Bookings",
+      Icon: History,
+      active: pathname.startsWith("/pos/bookings"),
     },
     {
       section: "Front office",
