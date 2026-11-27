@@ -37,6 +37,7 @@ import { Route as PosReportsRouteImport } from './routes/pos.reports'
 import { Route as PosRestaurantRouteImport } from './routes/pos.restaurant'
 import { Route as PosStaffRouteImport } from './routes/pos.staff'
 import { Route as PosStockRouteImport } from './routes/pos.stock'
+import { Route as PosTasksRouteImport } from './routes/pos.tasks'
 import { Route as RoomsSlugRouteImport } from './routes/rooms.$slug'
 import { Route as PosAccountIdRouteImport } from './routes/pos.account.$id'
 
@@ -180,6 +181,11 @@ const PosStockRoute = PosStockRouteImport.update({
   path: '/stock',
   getParentRoute: () => PosRoute,
 } as any)
+const PosTasksRoute = PosTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => PosRoute,
+} as any)
 const RoomsSlugRoute = RoomsSlugRouteImport.update({
   id: '/rooms/$slug',
   path: '/rooms/$slug',
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/pos/restaurant': typeof PosRestaurantRoute
   '/pos/staff': typeof PosStaffRoute
   '/pos/stock': typeof PosStockRoute
+  '/pos/tasks': typeof PosTasksRoute
   '/rooms/$slug': typeof RoomsSlugRoute
   '/pos/': typeof PosIndexRoute
   '/pos/account/$id': typeof PosAccountIdRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/pos/restaurant': typeof PosRestaurantRoute
   '/pos/staff': typeof PosStaffRoute
   '/pos/stock': typeof PosStockRoute
+  '/pos/tasks': typeof PosTasksRoute
   '/rooms/$slug': typeof RoomsSlugRoute
   '/pos': typeof PosIndexRoute
   '/pos/account/$id': typeof PosAccountIdRoute
@@ -283,6 +291,7 @@ export interface FileRoutesById {
   '/pos/restaurant': typeof PosRestaurantRoute
   '/pos/staff': typeof PosStaffRoute
   '/pos/stock': typeof PosStockRoute
+  '/pos/tasks': typeof PosTasksRoute
   '/rooms/$slug': typeof RoomsSlugRoute
   '/pos/': typeof PosIndexRoute
   '/pos/account/$id': typeof PosAccountIdRoute
@@ -317,6 +326,7 @@ export interface FileRouteTypes {
     | '/pos/restaurant'
     | '/pos/staff'
     | '/pos/stock'
+    | '/pos/tasks'
     | '/rooms/$slug'
     | '/pos/'
     | '/pos/account/$id'
@@ -348,6 +358,7 @@ export interface FileRouteTypes {
     | '/pos/restaurant'
     | '/pos/staff'
     | '/pos/stock'
+    | '/pos/tasks'
     | '/rooms/$slug'
     | '/pos'
     | '/pos/account/$id'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/pos/restaurant'
     | '/pos/staff'
     | '/pos/stock'
+    | '/pos/tasks'
     | '/rooms/$slug'
     | '/pos/'
     | '/pos/account/$id'
@@ -599,6 +611,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosStockRouteImport
       parentRoute: typeof PosRoute
     }
+    '/pos/tasks': {
+      id: '/pos/tasks'
+      path: '/tasks'
+      fullPath: '/pos/tasks'
+      preLoaderRoute: typeof PosTasksRouteImport
+      parentRoute: typeof PosRoute
+    }
     '/rooms/$slug': {
       id: '/rooms/$slug'
       path: '/rooms/$slug'
@@ -632,6 +651,7 @@ interface PosRouteChildren {
   PosRestaurantRoute: typeof PosRestaurantRoute
   PosStaffRoute: typeof PosStaffRoute
   PosStockRoute: typeof PosStockRoute
+  PosTasksRoute: typeof PosTasksRoute
   PosIndexRoute: typeof PosIndexRoute
   PosAccountIdRoute: typeof PosAccountIdRoute
 }
@@ -652,6 +672,7 @@ const PosRouteChildren: PosRouteChildren = {
   PosRestaurantRoute: PosRestaurantRoute,
   PosStaffRoute: PosStaffRoute,
   PosStockRoute: PosStockRoute,
+  PosTasksRoute: PosTasksRoute,
   PosIndexRoute: PosIndexRoute,
   PosAccountIdRoute: PosAccountIdRoute,
 }

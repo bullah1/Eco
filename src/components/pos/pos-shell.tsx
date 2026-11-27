@@ -6,6 +6,7 @@ import {
   BarChart3,
   HandCoins,
   LayoutDashboard,
+  ListChecks,
   History,
   Package,
   Receipt,
@@ -202,6 +203,13 @@ function Frame({ children }: { children: ReactNode }) {
       short: "Rooms",
       Icon: BedDouble,
       active: pathname.startsWith("/pos/housekeeping"),
+    },
+    {
+      section: "Front office",
+      to: "/pos/tasks",
+      label: "Tasks",
+      Icon: ListChecks,
+      active: pathname.startsWith("/pos/tasks"),
     },
     {
       section: "Restaurant",

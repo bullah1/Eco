@@ -546,6 +546,72 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_tasks: {
+        Row: {
+          assigned_name: string
+          assigned_to: string | null
+          blocks_room: boolean
+          created_at: string
+          created_by: string | null
+          created_by_name: string
+          detail: string
+          done_at: string | null
+          done_by_name: string
+          done_note: string
+          due_date: string | null
+          id: string
+          kind: string
+          priority: string
+          room_unit_id: string | null
+          status: string
+          task_no: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_name?: string
+          assigned_to?: string | null
+          blocks_room?: boolean
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          detail?: string
+          done_at?: string | null
+          done_by_name?: string
+          done_note?: string
+          due_date?: string | null
+          id?: string
+          kind?: string
+          priority?: string
+          room_unit_id?: string | null
+          status?: string
+          task_no?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_name?: string
+          assigned_to?: string | null
+          blocks_room?: boolean
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          detail?: string
+          done_at?: string | null
+          done_by_name?: string
+          done_note?: string
+          due_date?: string | null
+          id?: string
+          kind?: string
+          priority?: string
+          room_unit_id?: string | null
+          status?: string
+          task_no?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1381,6 +1447,22 @@ export type Database = {
       }
       pos_roll_overstays: { Args: never; Returns: Json }
       pos_move_booking: { Args: { p_reservation: string; p_unit: string }; Returns: undefined }
+      pos_staff_names: { Args: never; Returns: { name: string; user_id: string }[] }
+      pos_task_save: {
+        Args: {
+          p_assignee: string | null
+          p_blocks_room: boolean
+          p_detail: string
+          p_due: string | null
+          p_id: string | null
+          p_kind: string
+          p_priority: string
+          p_room: string | null
+          p_title: string
+        }
+        Returns: string
+      }
+      pos_task_set_status: { Args: { p_id: string; p_note: string; p_status: string }; Returns: undefined }
       pos_confirm_booking: { Args: { p_reservation: string }; Returns: number }
       pos_cancel_booking: { Args: { p_reason: string; p_reservation: string }; Returns: number }
       resort_today: { Args: never; Returns: string }
