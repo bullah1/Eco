@@ -5,6 +5,7 @@ import {
   BadgePercent,
   BarChart3,
   HandCoins,
+  LayoutDashboard,
   History,
   Package,
   Receipt,
@@ -162,6 +163,14 @@ function Frame({ children }: { children: ReactNode }) {
   const pendingDiscounts = usePendingDiscounts(isAdmin).data?.length ?? 0;
 
   const nav = [
+    {
+      section: "Front office",
+      to: "/pos/overview",
+      label: "Overview",
+      short: "Home",
+      Icon: LayoutDashboard,
+      active: pathname.startsWith("/pos/overview"),
+    },
     {
       section: "Front office",
       to: "/pos",
@@ -552,9 +561,11 @@ export function Panel({
   className?: string | undefined;
 }) {
   return (
-    <section className={`rounded-xl border border-pos-line bg-white p-4 sm:p-5 ${className}`}>
+    <section
+      className={`min-w-0 rounded-xl border border-pos-line bg-white p-4 sm:p-5 ${className}`}
+    >
       {(title || aside) && (
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           {title && <h2 className="text-[15px] font-semibold">{title}</h2>}
           {aside}
         </div>
