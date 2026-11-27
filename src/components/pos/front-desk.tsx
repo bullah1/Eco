@@ -49,6 +49,7 @@ import {
   type TileState,
 } from "@/lib/pos";
 import { useReportRows } from "@/lib/pos-reports";
+import { buildDesk, type Stay } from "@/lib/pos-desk";
 import { isLow, qty, usePendingDiscounts, useStock } from "@/lib/pos-extras";
 import { LoadState, PageTitle, Panel, usePos } from "./pos-shell";
 import { BookingDialog, type BookingStart } from "./walk-in-dialog";
@@ -116,27 +117,29 @@ export function FrontDesk() {
     () => (board.data ? groupArrivals(board.data.reservations, today) : []),
     [board.data, today],
   );
-  const upcoming = useMemo(() => {
-    if (!board.data) return [];
-    const future = board.data.reservations.filter(
-      (r) => r.stay_status === "expected" && r.check_in > today,
-    );
-    const seen = new Map<
-      string,
-      { name: string; check_in: string; rooms: number; pending: boolean }
-    >();
-    for (const r of future) {
-      const key = r.booking_group || r.booking_reference;
-      const cur = seen.get(key);
-      seen.set(key, {
-        name: r.guest_name || "Guest",
-        check_in: cur && cur.check_in < r.check_in ? cur.check_in : r.check_in,
-        rooms: (cur?.rooms ?? 0) + 1,
-        pending: Boolean(cur?.pending) || r.status === "pending",
-      });
-    }
-    return [...seen.values()].sort((a, b) => a.check_in.localeCompare(b.check_in)).slice(0, 8);
-  }, [board.data, today]);
+  const desk = useMemo(
+    () =>
+      board.data
+        ? buildDesk(board.data.units, board.data.reservations, today)
+        : { free: [], leaving: [], staying: [], booked: [], outOfOrder: [] },
+    [board.data, today],
+  );
+  const freeGroups = useMemo(() => {
+    const map = new Map<string, typeof desk.free>();
+    for (const f of desk.free) map.set(f.unit.type_name, [...(map.get(f.unit.type_name) ?? []), f]);
+    return [...map.entries()];
+  }, [desk]);
+  const firstFree = [...desk.leaving, ...desk.staying].map((x) => x.freeFrom).sort()[0];
+  const [bookedShown, setBookedShown] = useState(8);
+
+  // Tell the desk when extra nights were billed automatically.
+  const rolled = board.data?.rolled;
+  useEffect(() => {
+    if (rolled && rolled.extended > 0)
+      toast.info(
+        `${rolled.extended} ${rolled.extended === 1 ? "room" : "rooms"} stayed past departure. The extra night is on the bill`,
+      );
+  }, [rolled]);
 
   // Opened from the search box: /pos?room=<unit id> shows that room's panel.
   useEffect(() => {
@@ -146,15 +149,7 @@ export function FrontDesk() {
     void navigate({ to: "/pos", search: {}, replace: true });
   }, [search.room, tiles, navigate]);
 
-  const groups = useMemo(() => {
-    const map = new Map<string, BoardTile[]>();
-    for (const t of tiles) map.set(t.unit.type_name, [...(map.get(t.unit.type_name) ?? []), t]);
-    return [...map.entries()];
-  }, [tiles]);
-
   const count = (s: TileState) => tiles.filter((t) => t.state === s).length;
-  const leaving = tiles.filter((t) => t.state === "leaving");
-  const inUse = count("in_house") + count("leaving");
 
   const arrivalFor = (tile: BoardTile) =>
     arrivals.find((a) => a.reservations.some((r) => r.id === tile.reservation?.id)) ?? null;
@@ -244,9 +239,9 @@ export function FrontDesk() {
               href="/pos/reports"
               strong
             />
-            <Stat label="Rooms in use" value={inUse} of={tiles.length} />
+            <Stat label="Free tonight" value={desk.free.length} of={tiles.length} />
             <Stat label="Arriving today" value={arrivals.length} />
-            <Stat label="Leaving today" value={leaving.length} />
+            <Stat label="Leaving today" value={desk.leaving.length} />
             <Stat
               label="Money still due"
               value={accounts.data ? taka(owedTotal) : "…"}
@@ -264,63 +259,162 @@ export function FrontDesk() {
           </section>
 
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <Panel
-              title="Rooms tonight"
-              aside={
-                <ul className="hidden flex-wrap gap-x-4 gap-y-1 text-xs text-pos-muted md:flex">
-                  {(["in_house", "arriving", "leaving", "free", "dirty"] as TileState[]).map(
-                    (s) => (
-                      <li key={s} className="flex items-center gap-1.5">
-                        <span className={`size-3 rounded-[3px] border ${tileLook[s].cls}`} />
-                        {tileLook[s].label}
-                      </li>
-                    ),
-                  )}
-                </ul>
-              }
-            >
-              {tiles.length === 0 ? (
-                <p className="py-6 text-center text-sm text-pos-muted">
-                  No rooms yet. Add room types and rooms in the admin panel.
-                </p>
-              ) : (
-                <div className="grid gap-5">
-                  {groups.map(([name, list]) => (
-                    <div key={name}>
-                      <p className="mb-2 text-xs text-pos-muted">
-                        {name} · {taka(list[0]?.unit.rate_cents)} / night
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-                        {list.map((tile) => (
-                          <button
-                            key={tile.unit.id}
-                            type="button"
-                            onClick={() => setOpenTile(tile)}
-                            className={`flex h-[68px] min-w-0 flex-col justify-between rounded-lg border px-2.5 py-2 text-left transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pos-teal ${tileLook[tile.state].cls}`}
-                          >
-                            <span className="flex min-w-0 items-baseline justify-between gap-1.5">
-                              <span className="shrink-0 whitespace-nowrap text-[15px] font-semibold">
-                                {tile.unit.name}
+            <div className="grid min-w-0 content-start gap-5">
+              {/* 1. Free now */}
+              <Panel
+                title={`Free now · ${desk.free.length} ${desk.free.length === 1 ? "room" : "rooms"}`}
+                aside={
+                  <Button
+                    onClick={() => setBooking({})}
+                    variant="outline"
+                    className="h-9 gap-1.5 px-3"
+                  >
+                    <CalendarPlus size={15} /> Book other dates
+                  </Button>
+                }
+              >
+                {desk.free.length === 0 ? (
+                  <p className="py-4 text-sm text-pos-muted">
+                    No room is free tonight.
+                    {firstFree && ` The first room is free again on ${shortDate(firstFree)}.`}
+                  </p>
+                ) : (
+                  <div className="grid gap-4">
+                    {freeGroups.map(([typeName, list]) => (
+                      <div key={typeName}>
+                        <p className="mb-2 flex flex-wrap items-baseline gap-x-2 text-sm">
+                          <span className="font-medium">{typeName}</span>
+                          <span className="text-xs text-pos-muted">
+                            {taka(list[0]!.unit.rate_cents)} / night · {list.length} free
+                          </span>
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+                          {list.map((f) => (
+                            <button
+                              key={f.unit.id}
+                              type="button"
+                              onClick={() => setBooking({ checkIn: today, unitId: f.unit.id })}
+                              aria-label={`Book ${f.unit.name} from today`}
+                              className="group flex min-w-0 flex-col rounded-lg border border-pos-teal/40 bg-white px-3 py-2.5 text-left transition-colors hover:border-pos-teal hover:bg-pos-teal-soft/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pos-teal"
+                            >
+                              <span className="flex items-center justify-between gap-2">
+                                <span className="whitespace-nowrap text-[15px] font-semibold">
+                                  {f.unit.name}
+                                </span>
+                                <span className="text-[11px] font-medium text-pos-teal opacity-0 transition-opacity group-hover:opacity-100 max-md:hidden">
+                                  Book
+                                </span>
                               </span>
-                              <span className="min-w-0 truncate text-[10.5px] opacity-85">
-                                {tileLook[tile.state].short}
+                              <span className="mt-0.5 truncate text-xs text-pos-muted">
+                                {f.freeUntil
+                                  ? `Free till ${shortDate(f.freeUntil)}`
+                                  : "No bookings ahead"}
                               </span>
-                            </span>
-                            <span className="truncate text-xs opacity-90">
-                              {tile.reservation
-                                ? `${tile.reservation.guest_name || "Guest"}${tile.state === "in_house" ? ` · till ${shortDate(tile.reservation.check_out)}` : ""}`
-                                : tile.next
-                                  ? `Next: ${shortDate(tile.next.check_in)}`
-                                  : ""}
-                            </span>
-                          </button>
-                        ))}
+                              {f.dirty && (
+                                <span className="mt-1 w-fit rounded-full bg-[#f3e6cf] px-2 py-0.5 text-[11px] text-[#4d3a17]">
+                                  Needs cleaning
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Panel>
+                    ))}
+                  </div>
+                )}
+              </Panel>
+
+              {/* 2. Leaving today */}
+              <Panel
+                title={`Leaving today · ${desk.leaving.length}`}
+                className={desk.leaving.some((s) => s.blocked) ? "border-red-300" : undefined}
+              >
+                {desk.leaving.length === 0 ? (
+                  <p className="text-sm text-pos-muted">No check-outs left today.</p>
+                ) : (
+                  <ul className="divide-y divide-pos-line">
+                    {desk.leaving.map((s) => (
+                      <StayRow key={s.reservation.id} stay={s} today={today} leaving />
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+
+              {/* 3. Staying */}
+              <Panel title={`Staying now · ${desk.staying.length}`}>
+                {desk.staying.length === 0 ? (
+                  <p className="text-sm text-pos-muted">No one else is staying tonight.</p>
+                ) : (
+                  <ul className="divide-y divide-pos-line">
+                    {desk.staying.map((s) => (
+                      <StayRow key={s.reservation.id} stay={s} today={today} />
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+
+              {/* 4. Booked ahead */}
+              <Panel
+                title={`Booked ahead · ${desk.booked.length}`}
+                aside={
+                  <Link to="/pos" search={{ view: "calendar" }} className="text-xs text-pos-teal">
+                    Open calendar
+                  </Link>
+                }
+              >
+                {desk.booked.length === 0 ? (
+                  <p className="text-sm text-pos-muted">No bookings in the next two months.</p>
+                ) : (
+                  <ul className="divide-y divide-pos-line">
+                    {desk.booked.slice(0, bookedShown).map((b) => (
+                      <li key={b.key} className="flex items-center gap-3 py-2.5">
+                        <span className="w-24 shrink-0 text-sm font-medium tabular-nums">
+                          {shortDate(b.check_in)}
+                          <span className="block text-xs font-normal text-pos-muted">
+                            to {shortDate(b.check_out)}
+                          </span>
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5">
+                            <span className="truncate font-medium">{b.guest_name}</span>
+                            {b.request && (
+                              <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                                Request
+                              </span>
+                            )}
+                          </span>
+                          <span className="block truncate text-xs text-pos-muted">
+                            {b.rooms.join(", ")} · {nights(b.check_in, b.check_out)}{" "}
+                            {nights(b.check_in, b.check_out) === 1 ? "night" : "nights"}
+                          </span>
+                        </span>
+                        {b.guest_phone && (
+                          <Button
+                            asChild
+                            variant="outline"
+                            className="size-9 shrink-0 p-0"
+                            aria-label={`Call ${b.guest_name}`}
+                          >
+                            <a href={`tel:${b.guest_phone}`}>
+                              <Phone size={15} />
+                            </a>
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {desk.booked.length > bookedShown && (
+                  <button
+                    type="button"
+                    onClick={() => setBookedShown((k) => k + 10)}
+                    className="mt-1 text-sm text-pos-teal"
+                  >
+                    Show more ({desk.booked.length - bookedShown})
+                  </button>
+                )}
+              </Panel>
+            </div>
 
             <div className="grid content-start gap-5">
               {pendingDiscounts.length > 0 && (
@@ -427,35 +521,6 @@ export function FrontDesk() {
                 )}
               </Panel>
 
-              <Panel title="Leaving today">
-                {leaving.length === 0 ? (
-                  <p className="text-sm text-pos-muted">No check-outs left today.</p>
-                ) : (
-                  <ul className="divide-y divide-pos-line">
-                    {leaving.map((t) => (
-                      <li
-                        key={t.unit.id}
-                        className="flex items-center justify-between gap-3 py-2.5"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium">
-                            {t.reservation?.guest_name || "Guest"}
-                          </span>
-                          <span className="text-xs text-pos-muted">{t.unit.name}</span>
-                        </span>
-                        {t.reservation?.account_id && (
-                          <Button asChild variant="outline" className="h-9 gap-1 px-3">
-                            <Link to="/pos/account/$id" params={{ id: t.reservation.account_id }}>
-                              Bill <ArrowRight size={14} />
-                            </Link>
-                          </Button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Panel>
-
               {owing.length > 0 && (
                 <Panel
                   title="Money still due"
@@ -499,20 +564,15 @@ export function FrontDesk() {
                 </Panel>
               )}
 
-              {upcoming.length > 0 && (
-                <Panel title="Coming up">
-                  <ul className="divide-y divide-pos-line text-sm">
-                    {upcoming.map((u, i) => (
-                      <li key={i} className="flex items-center justify-between gap-3 py-2">
-                        <span className="min-w-0 truncate">
-                          {u.name}
-                          {u.pending && (
-                            <span className="ml-1.5 text-[11px] text-amber-800">request</span>
-                          )}
-                        </span>
-                        <span className="shrink-0 text-xs text-pos-muted">
-                          {shortDate(u.check_in)} · {u.rooms} {u.rooms === 1 ? "room" : "rooms"}
-                        </span>
+              {desk.outOfOrder.length > 0 && (
+                <Panel title="Out of order">
+                  <ul className="flex flex-wrap gap-1.5">
+                    {desk.outOfOrder.map((u) => (
+                      <li
+                        key={u.id}
+                        className="flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-[13px] text-red-900"
+                      >
+                        <Wrench size={13} /> {u.name}
                       </li>
                     ))}
                   </ul>
@@ -544,6 +604,54 @@ export function FrontDesk() {
         onClose={() => setCheckIn(null)}
       />
     </>
+  );
+}
+
+function StayRow({ stay, today, leaving }: { stay: Stay; today: string; leaving?: boolean }) {
+  const r = stay.reservation;
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5">
+      <span className="w-16 shrink-0 text-[15px] font-semibold">{stay.unit.name}</span>
+      <span className="min-w-0 flex-1 basis-40">
+        <span className="block truncate font-medium">{r.guest_name || "Guest"}</span>
+        <span className="block text-xs text-pos-muted">
+          {shortDate(r.check_in)} – {shortDate(r.check_out)} ·{" "}
+          {leaving
+            ? "leaves today"
+            : `${stay.nightsLeft} ${stay.nightsLeft === 1 ? "night" : "nights"} left`}
+        </span>
+        {stay.extended > 0 && (
+          <span className="mt-1 inline-block rounded-full bg-[#f3e6cf] px-2 py-0.5 text-[11px] text-[#4d3a17]">
+            Stayed {stay.extended} extra {stay.extended === 1 ? "night" : "nights"} · added to bill
+          </span>
+        )}
+        {stay.blocked && (
+          <span className="mt-1 block rounded-md bg-red-50 px-2 py-1 text-xs text-red-800">
+            Past the leaving date, and the next guest is booked in this room. Move the next guest's
+            booking in the calendar, or check this guest out.
+          </span>
+        )}
+      </span>
+      {!leaving && (
+        <span className="shrink-0 text-right text-xs text-pos-muted max-sm:order-last max-sm:w-full max-sm:text-left">
+          Room free from
+          <span className="block font-medium text-pos-ink max-sm:inline max-sm:ml-1">
+            {stay.freeFrom === today ? "today" : shortDate(stay.freeFrom)}
+          </span>
+        </span>
+      )}
+      {r.account_id && (
+        <Button
+          asChild
+          variant={leaving ? "default" : "outline"}
+          className={`h-9 shrink-0 gap-1 px-3 ${leaving ? "bg-pos-ocean text-white hover:bg-pos-ocean/90" : ""}`}
+        >
+          <Link to="/pos/account/$id" params={{ id: r.account_id }}>
+            {leaving ? "Bill and check out" : "Bill"} <ArrowRight size={14} />
+          </Link>
+        </Button>
+      )}
+    </li>
   );
 }
 

@@ -121,6 +121,14 @@ export function BookingDialog({
 
   const rooms = () =>
     chosen.map((r) => ({ unit_id: r.room_unit_id, guests: picked[r.room_unit_id] }));
+  const freeByType = (() => {
+    const map = new Map<string, NonNullable<typeof free.data>>();
+    for (const r of free.data ?? []) {
+      if (unitById.get(r.room_unit_id)?.housekeeping === "maintenance") continue; // out of order
+      map.set(r.type_name, [...(map.get(r.type_name) ?? []), r]);
+    }
+    return [...map.entries()];
+  })();
   const action = usePosAction((mode: "check_in" | "book"): Promise<string | null> =>
     mode === "check_in"
       ? rpc(
@@ -174,11 +182,182 @@ export function BookingDialog({
         <DialogHeader>
           <DialogTitle>New booking</DialogTitle>
           <DialogDescription>
-            Arriving today can check in straight away. Breakfast is included with every room.
+            Choose the dates, pick a free room, then add the guest. Breakfast is included.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3 sm:grid-cols-2">
+          <p className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
+            <span className="grid size-6 place-items-center rounded-full bg-pos-ocean text-xs text-white">
+              1
+            </span>
+            When are they coming?
+          </p>
+          <div className="grid gap-1.5">
+            <Label htmlFor="wi-in">Arriving on</Label>
+            <Input
+              id="wi-in"
+              type="date"
+              min={today}
+              className="h-11 text-base sm:text-sm"
+              value={checkIn}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCheckIn(v);
+                if (v && checkOut <= v) setCheckOut(addDays(v, 1));
+              }}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="wi-out">Leaving on</Label>
+            <Input
+              id="wi-out"
+              type="date"
+              min={addDays(checkIn || today, 1)}
+              max={addDays(checkIn || today, 60)}
+              className="h-11 text-base sm:text-sm"
+              value={checkOut}
+              onChange={(e) => setCheckOut(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5 sm:col-span-2" aria-label="How many nights">
+            {[1, 2, 3, 4, 5, 7].map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={n === k}
+                onClick={() => setCheckOut(addDays(checkIn || today, k))}
+                className={`h-9 rounded-full border px-3.5 text-sm ${n === k ? "border-pos-ocean bg-pos-ocean text-white" : "border-pos-line hover:border-pos-ocean"}`}
+              >
+                {k} {k === 1 ? "night" : "nights"}
+              </button>
+            ))}
+          </div>
+          <p className="text-sm font-medium text-pos-ocean sm:col-span-2">
+            {validDates
+              ? `${shortDate(checkIn)} – ${shortDate(checkOut)} · ${n} ${n === 1 ? "night" : "nights"}`
+              : "Choose an arrival from today and a departure after it"}
+          </p>
+        </div>
+
+        <div>
+          <p className="flex items-center gap-2 text-sm font-semibold mb-2">
+            <span className="grid size-6 place-items-center rounded-full bg-pos-ocean text-xs text-white">
+              2
+            </span>
+            Pick a free room
+          </p>
+          {free.isLoading && (
+            <p className="flex items-center gap-2 text-sm text-pos-muted">
+              <LoaderCircle size={14} className="animate-spin" /> Checking rooms
+            </p>
+          )}
+          {free.isError && (
+            <p className="text-sm text-red-700">Couldn't check rooms. {posError(free.error)}</p>
+          )}
+          {free.data && freeByType.length === 0 && (
+            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+              No room is free for all these nights. Try other dates.
+            </p>
+          )}
+          <div className="grid gap-4">
+            {freeByType.map(([typeName, list]) => (
+              <section key={typeName} aria-label={typeName}>
+                <p className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+                  <span className="font-medium">{typeName}</span>
+                  <span className="text-xs text-pos-muted">
+                    {taka(list[0]!.nightly_rate_cents)} / night ·{" "}
+                    <span className="font-medium text-pos-teal">{list.length} free</span>
+                  </span>
+                </p>
+                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {list.map((r) => {
+                    const guests = picked[r.room_unit_id] ?? 0;
+                    const on = guests > 0;
+                    const hk = unitById.get(r.room_unit_id)?.housekeeping;
+                    return (
+                      <li
+                        key={r.room_unit_id}
+                        className={`rounded-lg border p-3 transition-colors ${on ? "border-pos-ocean bg-pos-teal-soft/40" : "border-pos-line"}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <button
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() =>
+                              setPicked((p) => {
+                                const next = { ...p };
+                                if (on) delete next[r.room_unit_id];
+                                else next[r.room_unit_id] = Math.min(2, r.max_guests);
+                                return next;
+                              })
+                            }
+                            className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                          >
+                            <span
+                              className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded border ${on ? "border-pos-ocean bg-pos-ocean text-white" : "border-pos-line"}`}
+                            >
+                              {on && <Check size={13} />}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block font-medium">{r.room_name}</span>
+                              <span className="text-xs text-pos-muted">
+                                {taka(r.nightly_rate_cents)} / night · up to {r.max_guests}
+                                {hk && hk !== "clean" && (
+                                  <span className="ml-1 text-pos-gold-deep">· not cleaned</span>
+                                )}
+                              </span>
+                            </span>
+                          </button>
+                          {on && (
+                            <div className="flex items-center rounded-md border border-pos-line bg-white">
+                              <button
+                                type="button"
+                                aria-label="Fewer guests"
+                                disabled={guests <= 1}
+                                onClick={() =>
+                                  setPicked((p) => ({ ...p, [r.room_unit_id]: guests - 1 }))
+                                }
+                                className="grid size-9 place-items-center disabled:opacity-30"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <span
+                                className="w-6 text-center text-sm tabular-nums"
+                                aria-label="Guests"
+                              >
+                                {guests}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label="More guests"
+                                disabled={guests >= r.max_guests}
+                                onClick={() =>
+                                  setPicked((p) => ({ ...p, [r.room_unit_id]: guests + 1 }))
+                                }
+                                className="grid size-9 place-items-center disabled:opacity-30"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <p className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
+            <span className="grid size-6 place-items-center rounded-full bg-pos-ocean text-xs text-white">
+              3
+            </span>
+            Guest details
+          </p>
           <div className="grid gap-1.5 sm:col-span-2">
             <Label htmlFor="wi-name">Guest name</Label>
             <Input
@@ -213,33 +392,6 @@ export function BookingDialog({
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="wi-in">Arriving on</Label>
-            <Input
-              id="wi-in"
-              type="date"
-              min={today}
-              className="h-11 text-base sm:text-sm"
-              value={checkIn}
-              onChange={(e) => {
-                const v = e.target.value;
-                setCheckIn(v);
-                if (v && checkOut <= v) setCheckOut(addDays(v, 1));
-              }}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="wi-out">Leaving on</Label>
-            <Input
-              id="wi-out"
-              type="date"
-              min={addDays(checkIn || today, 1)}
-              max={addDays(checkIn || today, 60)}
-              className="h-11 text-base sm:text-sm"
-              value={checkOut}
-              onChange={(e) => setCheckOut(e.target.value)}
-            />
-          </div>
           <div className="grid gap-1.5 sm:col-span-2">
             <Label htmlFor="wi-note">
               Note <span className="font-normal text-pos-muted">(optional)</span>
@@ -253,97 +405,6 @@ export function BookingDialog({
               onChange={(e) => setNote(e.target.value)}
             />
           </div>
-          <p className="text-sm text-pos-muted sm:col-span-2">
-            {validDates
-              ? `${shortDate(checkIn)} – ${shortDate(checkOut)} · ${n} ${n === 1 ? "night" : "nights"}`
-              : "Choose an arrival from today and a departure after it"}
-          </p>
-        </div>
-
-        <div>
-          <p className="mb-2 text-sm font-medium">Free rooms for these nights</p>
-          {free.isLoading && (
-            <p className="flex items-center gap-2 text-sm text-pos-muted">
-              <LoaderCircle size={14} className="animate-spin" /> Checking rooms
-            </p>
-          )}
-          {free.isError && (
-            <p className="text-sm text-red-700">Couldn't check rooms. {posError(free.error)}</p>
-          )}
-          {free.data && free.data.length === 0 && (
-            <p className="text-sm text-pos-muted">No rooms are free for all these nights.</p>
-          )}
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {(free.data ?? []).map((r) => {
-              const guests = picked[r.room_unit_id] ?? 0;
-              const on = guests > 0;
-              const hk = unitById.get(r.room_unit_id)?.housekeeping;
-              return (
-                <li
-                  key={r.room_unit_id}
-                  className={`rounded-lg border p-3 transition-colors ${on ? "border-pos-ocean bg-pos-teal-soft/40" : "border-pos-line"}`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <button
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() =>
-                        setPicked((p) => {
-                          const next = { ...p };
-                          if (on) delete next[r.room_unit_id];
-                          else next[r.room_unit_id] = Math.min(2, r.max_guests);
-                          return next;
-                        })
-                      }
-                      className="flex min-w-0 flex-1 items-start gap-2 text-left"
-                    >
-                      <span
-                        className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded border ${on ? "border-pos-ocean bg-pos-ocean text-white" : "border-pos-line"}`}
-                      >
-                        {on && <Check size={13} />}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block font-medium">
-                          {r.room_name} · {r.type_name}
-                        </span>
-                        <span className="text-xs text-pos-muted">
-                          {taka(r.nightly_rate_cents)} / night · up to {r.max_guests}
-                          {hk && hk !== "clean" && (
-                            <span className="ml-1 text-pos-gold-deep">· not cleaned</span>
-                          )}
-                        </span>
-                      </span>
-                    </button>
-                    {on && (
-                      <div className="flex items-center rounded-md border border-pos-line bg-white">
-                        <button
-                          type="button"
-                          aria-label="Fewer guests"
-                          disabled={guests <= 1}
-                          onClick={() => setPicked((p) => ({ ...p, [r.room_unit_id]: guests - 1 }))}
-                          className="grid size-9 place-items-center disabled:opacity-30"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="w-6 text-center text-sm tabular-nums" aria-label="Guests">
-                          {guests}
-                        </span>
-                        <button
-                          type="button"
-                          aria-label="More guests"
-                          disabled={guests >= r.max_guests}
-                          onClick={() => setPicked((p) => ({ ...p, [r.room_unit_id]: guests + 1 }))}
-                          className="grid size-9 place-items-center disabled:opacity-30"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
         </div>
 
         {problem && (

@@ -598,6 +598,7 @@ export type Database = {
           booking_reference: string
           check_in: string
           check_out: string
+          extended_nights: number
           created_at: string
           guest_count: number
           guest_email: string
@@ -623,6 +624,7 @@ export type Database = {
           guest_phone?: string
           check_in: string
           check_out: string
+          extended_nights?: number
           created_at?: string
           guest_count?: number
           guest_note?: string
@@ -645,6 +647,7 @@ export type Database = {
           guest_phone?: string
           check_in?: string
           check_out?: string
+          extended_nights?: number
           created_at?: string
           guest_count?: number
           guest_note?: string
@@ -1340,6 +1343,8 @@ export type Database = {
         Args: { p_name: string; p_phone: string; p_ticket: string }
         Returns: string
       }
+      pos_roll_overstays: { Args: never; Returns: Json }
+      pos_move_booking: { Args: { p_reservation: string; p_unit: string }; Returns: undefined }
       pos_confirm_booking: { Args: { p_reservation: string }; Returns: number }
       pos_cancel_booking: { Args: { p_reason: string; p_reservation: string }; Returns: number }
       resort_today: { Args: never; Returns: string }

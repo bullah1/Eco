@@ -106,6 +106,8 @@ export type PosReservation = {
   guest_note: string;
   total_cents: number;
   account_id: string | null;
+  /** Nights added automatically because the guest stayed past departure. */
+  extended_nights?: number;
 };
 
 export type TileState = "in_house" | "leaving" | "arriving" | "free" | "dirty" | "maintenance";
@@ -269,6 +271,17 @@ export function useStaffRole(userId: string | undefined) {
   });
 }
 
+// Guests still here after their departure date get the extra night billed. The
+// database does this nightly too; the front desk also runs it every 10 minutes.
+let lastRoll = 0;
+async function rollOverstays(): Promise<{ extended: number; blocked: number } | null> {
+  if (Date.now() - lastRoll < 10 * 60_000) return null;
+  lastRoll = Date.now();
+  const { data, error } = await supabase.rpc("pos_roll_overstays");
+  if (error) return null;
+  return data as { extended: number; blocked: number };
+}
+
 export function useBoardData(enabled = true) {
   return useQuery({
     queryKey: posKeys.board,
@@ -276,6 +289,7 @@ export function useBoardData(enabled = true) {
     refetchInterval: 20_000,
     queryFn: async () => {
       const today = resortToday();
+      const rolled = await rollOverstays();
       const [unitsRes, resRes] = await Promise.all([
         supabase
           .from("room_units")
@@ -285,11 +299,11 @@ export function useBoardData(enabled = true) {
         supabase
           .from("reservations")
           .select(
-            "id, booking_reference, booking_group, room_unit_id, check_in, check_out, guest_count, status, stay_status, guest_name, guest_phone, guest_note, total_cents, account_id",
+            "id, booking_reference, booking_group, room_unit_id, check_in, check_out, guest_count, status, stay_status, guest_name, guest_phone, guest_note, total_cents, account_id, extended_nights",
           )
           .neq("status", "cancelled")
           .or(`check_out.gte.${addDays(today, -1)},stay_status.eq.in_house`)
-          .lte("check_in", addDays(today, 14))
+          .lte("check_in", addDays(today, 60))
           .order("check_in")
           .limit(1000),
       ]);
@@ -314,7 +328,7 @@ export function useBoardData(enabled = true) {
           max_guests: t?.max_guests ?? 2,
         };
       });
-      return { today, units, reservations: (resRes.data ?? []) as PosReservation[] };
+      return { today, units, rolled, reservations: (resRes.data ?? []) as PosReservation[] };
     },
   });
 }

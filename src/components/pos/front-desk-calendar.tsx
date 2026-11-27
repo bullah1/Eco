@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowRightLeft,
   ChevronLeft,
   ChevronRight,
   LoaderCircle,
@@ -436,6 +438,103 @@ export function FrontDeskCalendar({
   );
 }
 
+/** Move a booking that hasn't checked in to another free room. */
+function MoveRoom({
+  reservation: r,
+  today,
+  onDone,
+}: {
+  reservation: PosReservation;
+  today: string;
+  onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [unit, setUnit] = useState("");
+  const from = r.check_in < today ? today : r.check_in;
+  const free = useQuery({
+    queryKey: ["pos", "free-rooms", from, r.check_out],
+    enabled: open && r.check_out > from,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_available_rooms", {
+        p_check_in: from,
+        p_check_out: r.check_out,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const move = usePosAction(() =>
+    rpc(supabase.rpc("pos_move_booking", { p_reservation: r.id, p_unit: unit })),
+  );
+  if (!open)
+    return (
+      <Button variant="outline" className="h-11 gap-2" onClick={() => setOpen(true)}>
+        <ArrowRightLeft size={16} /> Move to another room
+      </Button>
+    );
+  const rooms = (free.data ?? []).filter((x) => x.max_guests >= r.guest_count);
+  return (
+    <form
+      className="grid gap-2 rounded-lg border border-pos-line p-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!unit) return;
+        move.mutate(undefined, {
+          onSuccess: () => {
+            const name = rooms.find((x) => x.room_unit_id === unit)?.room_name ?? "the new room";
+            toast.success(`${r.guest_name || "Booking"} moved to ${name}`);
+            onDone();
+          },
+          onError: (err) => toast.error(posError(err)),
+        });
+      }}
+    >
+      <label htmlFor="move-room" className="text-sm font-medium">
+        Move to a room free {shortDate(from)} – {shortDate(r.check_out)}
+      </label>
+      {free.isLoading ? (
+        <p className="flex items-center gap-2 text-sm text-pos-muted">
+          <LoaderCircle size={14} className="animate-spin" /> Checking rooms
+        </p>
+      ) : rooms.length === 0 ? (
+        <p className="text-sm text-pos-muted">No other room is free for these nights.</p>
+      ) : (
+        <select
+          id="move-room"
+          value={unit}
+          onChange={(e) => setUnit(e.target.value)}
+          className="h-11 rounded-md border border-pos-line bg-white px-2.5 text-base sm:text-sm"
+        >
+          <option value="">Choose a room</option>
+          {rooms.map((x) => (
+            <option key={x.room_unit_id} value={x.room_unit_id}>
+              {x.room_name} · {x.type_name} · {taka(x.nightly_rate_cents)}/night
+            </option>
+          ))}
+        </select>
+      )}
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 flex-1"
+          onClick={() => setOpen(false)}
+        >
+          Keep this room
+        </Button>
+        <Button
+          type="submit"
+          disabled={!unit || move.isPending}
+          className="h-10 flex-1 bg-pos-ocean text-white hover:bg-pos-ocean/90"
+        >
+          {move.isPending && <LoaderCircle size={16} className="animate-spin" />}
+          Move
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 function StaySheet({
   bar,
   all,
@@ -579,6 +678,9 @@ function StaySheet({
                     {confirm.isPending && <LoaderCircle size={16} className="animate-spin" />}
                     Confirm the booking
                   </Button>
+                )}
+                {r.stay_status === "expected" && r.status !== "cancelled" && (
+                  <MoveRoom reservation={r} today={today} onDone={close} />
                 )}
                 {r.stay_status === "expected" && !cancelling && (
                   <Button
