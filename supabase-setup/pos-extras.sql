@@ -384,6 +384,9 @@ BEGIN
   IF p_check_out IS NULL OR p_check_out < public.resort_today() THEN
     RAISE EXCEPTION 'The departure date cannot be in the past' USING ERRCODE = 'P0001';
   END IF;
+  IF p_check_out > public.resort_today() + 90 THEN
+    RAISE EXCEPTION 'The departure date is too far ahead' USING ERRCODE = 'P0001';
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM public.reservations WHERE account_id = p_account AND stay_status = 'in_house') THEN
     RAISE EXCEPTION 'No rooms on this account are checked in' USING ERRCODE = 'P0001';
   END IF;
