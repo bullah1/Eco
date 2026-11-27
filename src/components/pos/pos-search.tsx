@@ -70,7 +70,7 @@ export function PosSearch({
         onValueChange={setQuery}
         placeholder="Search room, guest name, phone or bill no."
       />
-      <CommandList className="max-h-[60vh] font-sans">
+      <CommandList className="max-h-[60vh] font-sans [&_[cmdk-item][data-selected=true]]:bg-pos-teal-soft [&_[cmdk-item][data-selected=true]]:text-pos-ink">
         <CommandEmpty>Nothing found.</CommandEmpty>
 
         {!typing && (
@@ -126,7 +126,11 @@ export function PosSearch({
                   <span
                     className={`shrink-0 text-xs ${a.status === "open" ? "text-pos-teal" : "text-pos-muted"}`}
                   >
-                    {a.status === "open" ? `Due ${taka(a.balance_cents)}` : "Closed"}
+                    {a.status !== "open"
+                      ? "Closed"
+                      : a.balance_cents < 0
+                        ? `Credit ${taka(-a.balance_cents)}`
+                        : `Due ${taka(a.balance_cents)}`}
                   </span>
                 </CommandItem>
               ))}

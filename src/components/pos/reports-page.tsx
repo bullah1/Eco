@@ -18,10 +18,7 @@ import { LoadState, PageTitle, Panel } from "./pos-shell";
 type Range = "today" | "7d" | "month" | "last_month" | "30d";
 
 /** [from, to) as YYYY-MM-DD dates in resort time. */
-function rangeDates(
-  range: Range,
-  today: string,
-): { from: string; to: string; label: string } {
+function rangeDates(range: Range, today: string): { from: string; to: string; label: string } {
   const tomorrow = addDays(today, 1);
   const monthStart = `${today.slice(0, 8)}01`;
   switch (range) {
@@ -297,10 +294,10 @@ function DayBars({ data }: { data: [string, number][] }) {
     <div className="flex h-48 items-end gap-1 sm:gap-1.5">
       {data.map(([day, v], i) => (
         <div key={day} className="group flex h-full min-w-0 flex-1 flex-col justify-end">
-          <div className="relative flex flex-1 items-end">
+          <div className="relative flex flex-1 items-end justify-center">
             <div
               title={`${shortDate(day)}: ${taka(v)}`}
-              className="w-full rounded-t-[3px] bg-pos-ocean transition-colors group-hover:bg-pos-gold"
+              className="w-full max-w-10 rounded-t-[3px] bg-pos-ocean transition-colors group-hover:bg-pos-gold"
               style={{ height: `${v > 0 ? Math.max(3, (v / max) * 100) : 0}%` }}
             />
           </div>
