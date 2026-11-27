@@ -4,6 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import {
   BadgePercent,
   BarChart3,
+  HandCoins,
   Package,
   Receipt,
   BedDouble,
@@ -213,6 +214,14 @@ function Frame({ children }: { children: ReactNode }) {
       label: "Cash",
       Icon: Wallet,
       active: pathname.startsWith("/pos/cash"),
+    },
+    {
+      section: "Money",
+      to: "/pos/payments",
+      label: "Payments received",
+      short: "Payments",
+      Icon: HandCoins,
+      active: pathname.startsWith("/pos/payments"),
     },
     {
       section: "Money",

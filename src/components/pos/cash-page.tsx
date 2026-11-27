@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDownLeft, ArrowUpRight, LoaderCircle, Lock, Printer, Unlock } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  HandCoins,
+  LoaderCircle,
+  Lock,
+  Printer,
+  Unlock,
+} from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +63,13 @@ export function CashPage() {
         <PageTitle
           title="Cash"
           sub="One shared drawer. Every payment, from room bills and the restaurant, lands in the open shift."
+          actions={
+            <Button asChild variant="outline" className="h-11 gap-2">
+              <Link to="/pos/payments">
+                <HandCoins size={16} /> Every payment received
+              </Link>
+            </Button>
+          }
         />
         <LoadState isLoading={q.isLoading} error={q.error} retry={() => void q.refetch()} />
         {q.data &&
