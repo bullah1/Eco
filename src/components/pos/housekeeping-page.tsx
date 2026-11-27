@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { BedDouble, CheckCircle2, Sparkles, Wrench } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import {
+  BedDouble,
+  CheckCircle2,
+  ClipboardList,
+  LoaderCircle,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -198,5 +208,138 @@ export function HousekeepingPage() {
         </>
       )}
     </>
+  );
+}
+
+/* ---------- Cleaner list: one simple Bangla page for the cleaning staff ---------- */
+
+export function CleanerList() {
+  const board = useBoardData();
+  const [busy, setBusy] = useState<string | null>(null);
+  const setState = usePosAction((v: { unit: string; state: Housekeeping }) =>
+    rpc(supabase.rpc("pos_set_housekeeping", { p_unit: v.unit, p_state: v.state })),
+  );
+  const today = board.data?.today ?? "";
+  const tiles = useMemo(
+    () =>
+      board.data
+        ? buildBoard(board.data.units, board.data.reservations, today).sort(
+            (a, b) => priority(a, today) - priority(b, today),
+          )
+        : [],
+    [board.data, today],
+  );
+
+  const now = tiles.filter(
+    (t) => t.unit.housekeeping === "dirty" && t.state !== "in_house" && t.state !== "leaving",
+  );
+  const later = tiles.filter((t) => t.state === "leaving");
+  const repair = tiles.filter((t) => t.unit.housekeeping === "maintenance");
+
+  const done = (tile: BoardTile) => {
+    setBusy(tile.unit.id);
+    setState.mutate(
+      { unit: tile.unit.id, state: "clean" },
+      {
+        onSuccess: () => toast.success(`${tile.unit.name} পরিষ্কার হয়েছে ✓`),
+        onError: (e) => toast.error(posError(e)),
+        onSettled: () => setBusy(null),
+      },
+    );
+  };
+
+  return (
+    <div className="mx-auto max-w-xl">
+      <PageTitle title="পরিষ্কারের তালিকা" sub="রুম পরিষ্কার শেষ হলে সবুজ বাটনে চাপ দিন।" />
+      <LoadState
+        isLoading={board.isLoading}
+        error={board.error}
+        retry={() => void board.refetch()}
+      />
+
+      {board.data && (
+        <div className="grid gap-6">
+          <section>
+            <h2 className="mb-2 text-base font-semibold">এখনই পরিষ্কার করুন ({now.length})</h2>
+            {now.length === 0 ? (
+              <p className="flex items-center gap-2 rounded-xl border border-pos-line bg-white p-5 text-pos-muted">
+                <CheckCircle2 size={22} className="text-pos-teal" /> সব রুম পরিষ্কার আছে।
+              </p>
+            ) : (
+              <ul className="grid gap-3">
+                {now.map((tile) => {
+                  const urgent = priority(tile, today) === 0;
+                  return (
+                    <li
+                      key={tile.unit.id}
+                      className={`rounded-xl border-2 bg-white p-4 ${urgent ? "border-pos-gold" : "border-pos-line"}`}
+                    >
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="text-3xl font-bold tracking-wide">{tile.unit.name}</p>
+                        {urgent && (
+                          <span className="rounded-full bg-pos-gold px-3 py-1 text-sm font-semibold text-pos-ocean">
+                            আজ গেস্ট আসবে
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm text-pos-muted">{tile.unit.type_name}</p>
+                      <button
+                        type="button"
+                        disabled={busy === tile.unit.id}
+                        onClick={() => done(tile)}
+                        className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-pos-teal text-lg font-semibold text-white transition-colors hover:bg-pos-teal/90 disabled:opacity-60"
+                      >
+                        {busy === tile.unit.id ? (
+                          <LoaderCircle size={22} className="animate-spin" />
+                        ) : (
+                          <CheckCircle2 size={22} />
+                        )}
+                        পরিষ্কার হয়েছে
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          {later.length > 0 && (
+            <section>
+              <h2 className="mb-2 text-base font-semibold">
+                গেস্ট চলে গেলে পরিষ্কার করবেন ({later.length})
+              </h2>
+              <ul className="grid grid-cols-3 gap-2">
+                {later.map((t) => (
+                  <li
+                    key={t.unit.id}
+                    className="rounded-xl border border-pos-line bg-white p-3 text-center text-xl font-bold"
+                  >
+                    {t.unit.name}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {repair.length > 0 && (
+            <section>
+              <h2 className="mb-2 text-base font-semibold">
+                মেরামত চলছে, ঢুকবেন না ({repair.length})
+              </h2>
+              <ul className="grid grid-cols-3 gap-2">
+                {repair.map((t) => (
+                  <li
+                    key={t.unit.id}
+                    className="rounded-xl border border-dashed border-red-300 bg-red-50 p-3 text-center text-xl font-bold text-red-900"
+                  >
+                    {t.unit.name}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

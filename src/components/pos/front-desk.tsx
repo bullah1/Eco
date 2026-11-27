@@ -38,7 +38,9 @@ import {
   posError,
   rpc,
   shortDate,
+  addDays,
   taka,
+  useAccounts,
   useBoardData,
   usePosAction,
   type Arrival,
@@ -46,6 +48,7 @@ import {
   type Housekeeping,
   type TileState,
 } from "@/lib/pos";
+import { useReportRows } from "@/lib/pos-reports";
 import { LoadState, PageTitle, Panel } from "./pos-shell";
 import { BookingDialog, type BookingStart } from "./walk-in-dialog";
 import { FrontDeskCalendar } from "./front-desk-calendar";
@@ -89,6 +92,17 @@ export function FrontDesk() {
   const [checkIn, setCheckIn] = useState<Arrival | null>(null);
 
   const today = board.data?.today ?? "";
+  const income = useReportRows(today || "1970-01-01", addDays(today || "1970-01-01", 1), true);
+  const accounts = useAccounts();
+  const todayRooms = (income.data?.roomPayments ?? []).reduce((s, p) => s + p.amount_cents, 0);
+  const todayRestaurant = (income.data?.restaurantPayments ?? []).reduce(
+    (s, p) => s + p.amount_cents,
+    0,
+  );
+  const owing = (accounts.data ?? [])
+    .filter((a) => a.status === "open" && a.balance_cents > 0)
+    .sort((a, b) => b.balance_cents - a.balance_cents);
+  const owedTotal = owing.reduce((s, a) => s + a.balance_cents, 0);
   const tiles = useMemo(
     () => (board.data ? buildBoard(board.data.units, board.data.reservations, today) : []),
     [board.data, today],
@@ -216,15 +230,30 @@ export function FrontDesk() {
         <>
           <section
             aria-label="Today at a glance"
-            className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5"
+            className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
           >
+            <Stat
+              label="Money in today"
+              value={income.data ? taka(todayRooms + todayRestaurant) : "…"}
+              sub={`Rooms ${taka(todayRooms)} · Restaurant ${taka(todayRestaurant)}`}
+              href="/pos/reports"
+              strong
+            />
+            <Stat label="Rooms in use" value={inUse} of={tiles.length} />
             <Stat label="Arriving today" value={arrivals.length} />
             <Stat label="Leaving today" value={leaving.length} />
-            <Stat label="Rooms in use" value={inUse} of={tiles.length} />
-            <Stat label="Free and clean" value={count("free")} />
+            <Stat
+              label="Money still due"
+              value={accounts.data ? taka(owedTotal) : "…"}
+              sub={`${owing.length} open ${owing.length === 1 ? "bill" : "bills"}`}
+              href="/pos/guests"
+              tone={owedTotal > 0 ? "warn" : undefined}
+            />
             <Stat
               label="Need cleaning"
               value={count("dirty")}
+              sub={`${count("free")} free and clean`}
+              href="/pos/housekeeping"
               tone={count("dirty") > 0 ? "warn" : undefined}
             />
           </section>
@@ -370,6 +399,49 @@ export function FrontDesk() {
                 )}
               </Panel>
 
+              {owing.length > 0 && (
+                <Panel
+                  title="Money still due"
+                  aside={
+                    <span className="text-xs font-medium tabular-nums text-pos-gold-deep">
+                      {taka(owedTotal)}
+                    </span>
+                  }
+                >
+                  <ul className="divide-y divide-pos-line">
+                    {owing.slice(0, 6).map((a) => (
+                      <li key={a.id}>
+                        <Link
+                          to="/pos/account/$id"
+                          params={{ id: a.id }}
+                          className="flex items-center justify-between gap-3 py-2.5 hover:text-pos-teal"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">
+                              {a.guest_name || "Guest"}
+                            </span>
+                            <span className="text-xs text-pos-muted">
+                              {a.rooms.length > 0 ? a.rooms.join(", ") : a.account_no}
+                            </span>
+                          </span>
+                          <span className="shrink-0 font-medium tabular-nums">
+                            {taka(a.balance_cents)}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {owing.length > 6 && (
+                    <Link
+                      to="/pos/guests"
+                      className="mt-1 inline-flex items-center gap-1 text-sm text-pos-teal"
+                    >
+                      See all {owing.length} <ArrowRight size={14} />
+                    </Link>
+                  )}
+                </Panel>
+              )}
+
               {upcoming.length > 0 && (
                 <Panel title="Coming up">
                   <ul className="divide-y divide-pos-line text-sm">
@@ -422,25 +494,48 @@ function Stat({
   label,
   value,
   of,
+  sub,
+  href,
   tone,
+  strong,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   of?: number | undefined;
+  sub?: string | undefined;
+  href?: string | undefined;
   tone?: "warn" | undefined;
+  strong?: boolean | undefined;
 }) {
-  return (
-    <div className="rounded-xl border border-pos-line bg-white px-4 py-3">
-      <p className="text-xs text-pos-muted">{label}</p>
+  const body = (
+    <>
+      <p className={`text-xs ${strong ? "text-pos-sand/75" : "text-pos-muted"}`}>{label}</p>
       <p
-        className={`mt-0.5 text-2xl font-semibold tabular-nums ${tone === "warn" ? "text-pos-gold-deep" : ""}`}
+        className={`mt-0.5 truncate text-2xl font-semibold tabular-nums ${tone === "warn" ? "text-pos-gold-deep" : ""}`}
       >
         {value}
         {of !== undefined && (
           <span className="ml-1 text-sm font-normal text-pos-muted">of {of}</span>
         )}
       </p>
-    </div>
+      {sub && (
+        <p
+          className={`mt-0.5 truncate text-[11px] ${strong ? "text-pos-sand/75" : "text-pos-muted"}`}
+        >
+          {sub}
+        </p>
+      )}
+    </>
+  );
+  const cls = `block rounded-xl border px-4 py-3 ${
+    strong ? "border-pos-ocean bg-pos-ocean text-white" : "border-pos-line bg-white"
+  }`;
+  return href ? (
+    <Link to={href} className={`${cls} transition-shadow hover:shadow-md`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
   );
 }
 

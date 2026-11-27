@@ -1,166 +1,102 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Printer } from "lucide-react";
+import { toast } from "sonner";
+import { FileSpreadsheet, LoaderCircle, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { addDays, paymentMethods, resortToday, shortDate, taka, useBoardData } from "@/lib/pos";
 import {
-  addDays,
-  nights,
-  paymentMethods,
-  resortToday,
-  shortDate,
-  taka,
-  useBoardData,
-} from "@/lib/pos";
+  rangeDates,
+  summarize,
+  useReportRows,
+  type Bucket,
+  type ReportRange,
+  type ReportSummary,
+} from "@/lib/pos-reports";
 import { LoadState, PageTitle, Panel } from "./pos-shell";
-
-type Range = "today" | "7d" | "month" | "last_month" | "30d";
-
-/** [from, to) as YYYY-MM-DD dates in resort time. */
-function rangeDates(range: Range, today: string): { from: string; to: string; label: string } {
-  const tomorrow = addDays(today, 1);
-  const monthStart = `${today.slice(0, 8)}01`;
-  switch (range) {
-    case "today":
-      return { from: today, to: tomorrow, label: "Today" };
-    case "7d":
-      return { from: addDays(today, -6), to: tomorrow, label: "Last 7 days" };
-    case "30d":
-      return { from: addDays(today, -29), to: tomorrow, label: "Last 30 days" };
-    case "month":
-      return { from: monthStart, to: tomorrow, label: "This month" };
-    case "last_month": {
-      const prevEnd = monthStart;
-      const prevStart = `${addDays(monthStart, -1).slice(0, 8)}01`;
-      return { from: prevStart, to: prevEnd, label: "Last month" };
-    }
-  }
-}
-
-/** Dhaka midnight of a date, as an ISO timestamp for created_at filters. */
-const dhakaStart = (date: string) => new Date(`${date}T00:00:00+06:00`).toISOString();
 
 const kindLabel: Record<string, string> = {
   room: "Rooms",
-  food: "Food & restaurant",
+  food: "Food on guest bills",
   service: "Services",
   other: "Other",
 };
-
-function useReport(from: string, to: string) {
-  return useQuery({
-    queryKey: ["pos", "report", from, to],
-    refetchInterval: 60_000,
-    queryFn: async () => {
-      const [pay, chg, res] = await Promise.all([
-        supabase
-          .from("account_payments")
-          .select("amount_cents, method, created_at")
-          .is("voided_at", null)
-          .gte("created_at", dhakaStart(from))
-          .lt("created_at", dhakaStart(to))
-          .limit(5000),
-        supabase
-          .from("account_charges")
-          .select("amount_cents, kind, charge_date")
-          .is("voided_at", null)
-          .gte("charge_date", from)
-          .lt("charge_date", to)
-          .limit(5000),
-        supabase
-          .from("reservations")
-          .select("check_in, check_out, room_unit_id, room_units(room_types(name))")
-          .neq("status", "cancelled")
-          .lt("check_in", to)
-          .gt("check_out", from)
-          .limit(5000),
-      ]);
-      for (const r of [pay, chg, res]) if (r.error) throw r.error;
-      return { payments: pay.data ?? [], charges: chg.data ?? [], stays: res.data ?? [] };
-    },
+const methodLabel = (m: string) => paymentMethods.find((p) => p.id === m)?.label ?? m;
+const monthName = (key: string) =>
+  new Date(`${key}-15T00:00:00Z`).toLocaleDateString("en-GB", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
   });
-}
+const tk = (cents: number) => Math.round(cents / 100);
 
 export function ReportsPage() {
-  const [range, setRange] = useState<Range>("7d");
+  const [range, setRange] = useState<ReportRange>("7d");
   const today = resortToday();
   const { from, to, label } = rangeDates(range, today);
-  const report = useReport(from, to);
+  const rows = useReportRows(from, to);
   const board = useBoardData();
   const roomCount = board.data?.units.filter((u) => u.is_active).length ?? 0;
+  const [exporting, setExporting] = useState(false);
 
-  const stats = useMemo(() => {
-    if (!report.data) return null;
-    const days = nights(from, to);
-    const { payments, charges, stays } = report.data;
+  const s = useMemo(
+    () => (rows.data ? summarize({ from, to, roomCount, ...rows.data }) : null),
+    [rows.data, from, to, roomCount],
+  );
+  const byMonth = s ? s.days > 62 : false;
+  const period = `${shortDate(from)} – ${shortDate(addDays(to, -1))}`;
 
-    const received = payments.reduce((s, p) => s + p.amount_cents, 0);
-    const byMethod = new Map<string, number>();
-    for (const p of payments)
-      byMethod.set(p.method, (byMethod.get(p.method) ?? 0) + p.amount_cents);
-
-    const sales = charges.reduce((s, c) => s + (c.amount_cents ?? 0), 0);
-    const byKind = new Map<string, number>();
-    for (const c of charges) byKind.set(c.kind, (byKind.get(c.kind) ?? 0) + (c.amount_cents ?? 0));
-
-    // Money received per day, for the bar chart.
-    const perDay = new Map<string, number>();
-    for (let d = from; d < to; d = addDays(d, 1)) perDay.set(d, 0);
-    for (const p of payments) {
-      const d = resortToday(new Date(p.created_at));
-      if (perDay.has(d)) perDay.set(d, (perDay.get(d) ?? 0) + p.amount_cents);
+  const exportExcel = async () => {
+    if (!s) return;
+    setExporting(true);
+    try {
+      await downloadExcel(
+        s,
+        `${label} (${period})`,
+        `santa-monica-report-${from}-to-${addDays(to, -1)}.xlsx`,
+      );
+    } catch {
+      toast.error("Couldn't make the Excel file. Please try again.");
+    } finally {
+      setExporting(false);
     }
+  };
 
-    // Room-nights sold inside the range, overall and by room type.
-    let roomNights = 0;
-    const byType = new Map<string, number>();
-    for (const r of stays) {
-      const start = r.check_in > from ? r.check_in : from;
-      const end = r.check_out < to ? r.check_out : to;
-      const n = nights(start, end);
-      roomNights += n;
-      const type =
-        (r.room_units as { room_types: { name: string } | null } | null)?.room_types?.name ??
-        "Room";
-      byType.set(type, (byType.get(type) ?? 0) + n);
-    }
-    const capacity = roomCount * days;
-    return {
-      days,
-      received,
-      sales,
-      paymentsCount: payments.length,
-      byMethod: [...byMethod.entries()].sort((a, b) => b[1] - a[1]),
-      byKind: [...byKind.entries()].sort((a, b) => b[1] - a[1]),
-      perDay: [...perDay.entries()],
-      roomNights,
-      occupancy: capacity > 0 ? Math.round((roomNights / capacity) * 100) : 0,
-      byType: [...byType.entries()].sort((a, b) => b[1] - a[1]),
-    };
-  }, [report.data, from, to, roomCount]);
-
-  const presets: [Range, string][] = [
+  const presets: [ReportRange, string][] = [
     ["today", "Today"],
     ["7d", "7 days"],
     ["30d", "30 days"],
     ["month", "This month"],
     ["last_month", "Last month"],
+    ["year", "This year"],
   ];
 
   return (
     <>
       <PageTitle
         title="Reports"
-        sub={`${label} · ${shortDate(from)} – ${shortDate(addDays(to, -1))}`}
+        sub={`${label} · ${period}`}
         actions={
-          <Button variant="outline" className="h-10 gap-2" onClick={() => window.print()}>
-            <Printer size={16} /> Print
-          </Button>
+          <>
+            <Button variant="outline" className="h-10 gap-2" onClick={() => window.print()}>
+              <Printer size={16} /> Print
+            </Button>
+            <Button
+              className="h-10 gap-2 bg-pos-ocean text-white hover:bg-pos-ocean/90"
+              disabled={!s || exporting}
+              onClick={() => void exportExcel()}
+            >
+              {exporting ? (
+                <LoaderCircle size={16} className="animate-spin" />
+              ) : (
+                <FileSpreadsheet size={16} />
+              )}
+              Excel
+            </Button>
+          </>
         }
       />
       <h1 className="mb-4 hidden text-lg font-semibold print:block">
-        Santa Monica Eco Beach Resort · Report · {shortDate(from)} – {shortDate(addDays(to, -1))}
+        Santa Monica Eco Beach Resort · {label} · {period}
       </h1>
 
       <div className="mb-5 flex gap-2 overflow-x-auto pb-1 print:hidden">
@@ -181,60 +117,74 @@ export function ReportsPage() {
         ))}
       </div>
 
-      <LoadState
-        isLoading={report.isLoading}
-        error={report.error}
-        retry={() => void report.refetch()}
-      />
+      <LoadState isLoading={rows.isLoading} error={rows.error} retry={() => void rows.refetch()} />
 
-      {stats && (
+      {s && (
         <div className="grid gap-5">
           <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <Big
-              label="Money received"
-              value={taka(stats.received)}
-              sub={`${stats.paymentsCount} payments`}
-            />
-            <Big label="Sales billed" value={taka(stats.sales)} sub="rooms, food and services" />
-            <Big
-              label="Occupancy"
-              value={`${stats.occupancy}%`}
-              sub={`${stats.roomNights} of ${roomCount * stats.days} room-nights`}
+              label="Total money received"
+              value={taka(s.received)}
+              sub={`${s.payments} payments · ${taka(s.days ? s.received / s.days : 0)} a day`}
+              strong
             />
             <Big
-              label="Average a day"
-              value={taka(stats.days ? stats.received / stats.days : 0)}
-              sub="money received"
+              label="From rooms & guest bills"
+              value={taka(s.rooms)}
+              sub={share(s.rooms, s.received)}
+            />
+            <Big
+              label="From restaurant"
+              value={taka(s.restaurant)}
+              sub={share(s.restaurant, s.received)}
+            />
+            <Big
+              label="Rooms filled"
+              value={`${s.occupancy}%`}
+              sub={`${s.roomNights} of ${s.capacity} room-nights`}
             />
           </section>
 
-          {stats.days > 1 && (
-            <Panel title="Money received each day">
-              <DayBars data={stats.perDay} />
+          {s.days > 1 && (
+            <Panel
+              title={byMonth ? "Money received each month" : "Money received each day"}
+              aside={
+                <span className="flex gap-3 text-xs text-pos-muted">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-sm bg-pos-ocean" /> Rooms
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-sm bg-pos-gold" /> Restaurant
+                  </span>
+                </span>
+              }
+            >
+              <StackBars
+                data={byMonth ? s.monthly : s.daily}
+                name={(k) => (byMonth ? monthName(k) : shortDate(k)).split(" ")[0] ?? k}
+                full={byMonth ? monthName : shortDate}
+              />
             </Panel>
           )}
 
           <div className="grid gap-5 lg:grid-cols-3">
-            <Panel title="Sales by type">
-              <Bars
-                rows={stats.byKind.map(([k, v]) => [kindLabel[k] ?? k, v])}
-                format={taka}
-                empty="No sales in this period."
-              />
-            </Panel>
             <Panel title="Payments by method">
               <Bars
-                rows={stats.byMethod.map(([m, v]) => [
-                  paymentMethods.find((p) => p.id === m)?.label ?? m,
-                  v,
-                ])}
+                rows={s.byMethod.map(([m, v]) => [methodLabel(m), v])}
                 format={taka}
                 empty="No payments in this period."
               />
             </Panel>
+            <Panel title="Billed to guests, by type">
+              <Bars
+                rows={s.byKind.map(([k, v]) => [kindLabel[k] ?? k, v])}
+                format={taka}
+                empty="Nothing billed in this period."
+              />
+            </Panel>
             <Panel title="Room-nights by room type">
               <Bars
-                rows={stats.byType}
+                rows={s.byType}
                 format={(n) => `${n} nights`}
                 empty="No stays in this period."
               />
@@ -246,12 +196,27 @@ export function ReportsPage() {
   );
 }
 
-function Big({ label, value, sub }: { label: string; value: string; sub: string }) {
+const share = (part: number, whole: number) =>
+  whole > 0 ? `${Math.round((part / whole) * 100)}% of the total` : "—";
+
+function Big({
+  label,
+  value,
+  sub,
+  strong,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  strong?: boolean;
+}) {
   return (
-    <div className="rounded-xl border border-pos-line bg-white px-4 py-3.5">
-      <p className="text-xs text-pos-muted">{label}</p>
+    <div
+      className={`rounded-xl border px-4 py-3.5 ${strong ? "border-pos-ocean bg-pos-ocean text-white" : "border-pos-line bg-white"}`}
+    >
+      <p className={`text-xs ${strong ? "text-pos-sand/75" : "text-pos-muted"}`}>{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
-      <p className="mt-0.5 text-xs text-pos-muted">{sub}</p>
+      <p className={`mt-0.5 text-xs ${strong ? "text-pos-sand/75" : "text-pos-muted"}`}>{sub}</p>
     </div>
   );
 }
@@ -287,25 +252,106 @@ function Bars({
   );
 }
 
-function DayBars({ data }: { data: [string, number][] }) {
-  const max = Math.max(1, ...data.map(([, v]) => v));
+function StackBars({
+  data,
+  name,
+  full,
+}: {
+  data: Bucket[];
+  name: (key: string) => string;
+  full: (key: string) => string;
+}) {
+  const max = Math.max(1, ...data.map((b) => b.rooms + b.restaurant));
   const showEvery = data.length > 16 ? Math.ceil(data.length / 10) : 1;
   return (
-    <div className="flex h-48 items-end gap-1 sm:gap-1.5">
-      {data.map(([day, v], i) => (
-        <div key={day} className="group flex h-full min-w-0 flex-1 flex-col justify-end">
-          <div className="relative flex flex-1 items-end justify-center">
+    <div className="flex h-52 items-end gap-1 sm:gap-1.5">
+      {data.map((b, i) => {
+        const total = b.rooms + b.restaurant;
+        return (
+          <div key={b.key} className="group flex h-full min-w-0 flex-1 flex-col justify-end">
             <div
-              title={`${shortDate(day)}: ${taka(v)}`}
-              className="w-full max-w-10 rounded-t-[3px] bg-pos-ocean transition-colors group-hover:bg-pos-gold"
-              style={{ height: `${v > 0 ? Math.max(3, (v / max) * 100) : 0}%` }}
-            />
+              className="flex flex-1 flex-col items-center justify-end"
+              title={`${full(b.key)}\nRooms ${taka(b.rooms)} · Restaurant ${taka(b.restaurant)}\nTotal ${taka(total)}`}
+            >
+              <div
+                className="flex w-full max-w-10 flex-col overflow-hidden rounded-t-[3px] transition-opacity group-hover:opacity-80"
+                style={{ height: `${total > 0 ? Math.max(3, (total / max) * 100) : 0}%` }}
+              >
+                <div className="bg-pos-gold" style={{ flexGrow: b.restaurant }} />
+                <div className="bg-pos-ocean" style={{ flexGrow: b.rooms }} />
+              </div>
+            </div>
+            <span className="mt-1.5 h-4 truncate text-center text-[10px] text-pos-muted">
+              {i % showEvery === 0 ? name(b.key) : ""}
+            </span>
           </div>
-          <span className="mt-1.5 h-4 truncate text-center text-[10px] text-pos-muted">
-            {i % showEvery === 0 ? shortDate(day).split(" ")[0] : ""}
-          </span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
+}
+
+/** Builds a 4-sheet .xlsx in the browser: summary, daily, monthly, breakdown. */
+async function downloadExcel(s: ReportSummary, title: string, fileName: string) {
+  const { default: writeXlsxFile } = await import("write-excel-file/browser");
+  const bold = (value: string | number) => ({ value, fontWeight: "bold" as const });
+  const cell = (value: string | number) => ({ value });
+
+  const summary = [
+    [bold("Santa Monica Eco Beach Resort")],
+    [cell(title)],
+    [],
+    [bold("Item"), bold("Amount (Tk)")],
+    [cell("Total money received"), cell(tk(s.received))],
+    [cell("From rooms & guest bills"), cell(tk(s.rooms))],
+    [cell("From restaurant"), cell(tk(s.restaurant))],
+    [cell("Billed to guests (rooms, food, services)"), cell(tk(s.sales))],
+    [cell("Number of payments"), cell(s.payments)],
+    [],
+    [bold("Occupancy"), bold("")],
+    [cell("Rooms filled (%)"), cell(s.occupancy)],
+    [cell("Room-nights sold"), cell(s.roomNights)],
+    [cell("Room-nights available"), cell(s.capacity)],
+  ];
+  const bucketRows = (list: Bucket[], label: (k: string) => string, first: string) => [
+    [bold(first), bold("Rooms (Tk)"), bold("Restaurant (Tk)"), bold("Total (Tk)")],
+    ...list.map((b) => [
+      cell(label(b.key)),
+      cell(tk(b.rooms)),
+      cell(tk(b.restaurant)),
+      cell(tk(b.rooms + b.restaurant)),
+    ]),
+    [bold("Total"), bold(tk(s.rooms)), bold(tk(s.restaurant)), bold(tk(s.received))],
+  ];
+  const fourCols = [{ width: 14 }, { width: 14 }, { width: 16 }, { width: 14 }];
+
+  await writeXlsxFile([
+    { data: summary, sheet: "Summary", columns: [{ width: 40 }, { width: 16 }] },
+    {
+      data: bucketRows(s.daily, (k) => k, "Date"),
+      sheet: "Daily",
+      columns: fourCols,
+      stickyRowsCount: 1,
+    },
+    {
+      data: bucketRows(s.monthly, monthName, "Month"),
+      sheet: "Monthly",
+      columns: fourCols,
+      stickyRowsCount: 1,
+    },
+    {
+      data: [
+        [bold("Payment method"), bold("Amount (Tk)")],
+        ...s.byMethod.map(([m, v]) => [cell(methodLabel(m)), cell(tk(v))]),
+        [],
+        [bold("Billed to guests"), bold("Amount (Tk)")],
+        ...s.byKind.map(([k, v]) => [cell(kindLabel[k] ?? k), cell(tk(v))]),
+        [],
+        [bold("Room type"), bold("Room-nights")],
+        ...s.byType.map(([t, n]) => [cell(t), cell(n)]),
+      ],
+      sheet: "Breakdown",
+      columns: [{ width: 28 }, { width: 16 }],
+    },
+  ]).toFile(fileName);
 }
